@@ -1670,216 +1670,21 @@ const RAW = ``;
    MAPA DE PAÍSES (código ISO → nome em português) — TODOS OS PAÍSES
    ========================================================= */
 const PAISES = {
-  'AF': 'Afeganistão',
-  'ZA': 'África do Sul',
-  'AL': 'Albânia',
-  'DE': 'Alemanha',
-  'AD': 'Andorra',
-  'AO': 'Angola',
-  'AG': 'Antígua e Barbuda',
-  'SA': 'Arábia Saudita',
-  'DZ': 'Argélia',
-  'AR': 'Argentina',
-  'AM': 'Armênia',
-  'AU': 'Austrália',
-  'AT': 'Áustria',
-  'AZ': 'Azerbaijão',
-  'BS': 'Bahamas',
-  'BD': 'Bangladesh',
-  'BB': 'Barbados',
-  'BH': 'Bahrein',
-  'BE': 'Bélgica',
-  'BZ': 'Belize',
-  'BJ': 'Benin',
-  'BY': 'Belarus',
-  'BO': 'Bolívia',
-  'BA': 'Bósnia e Herzegovina',
-  'BW': 'Botsuana',
-  'BR': 'Brasil',
-  'BN': 'Brunei',
-  'BG': 'Bulgária',
-  'BF': 'Burkina Faso',
-  'BI': 'Burundi',
-  'BT': 'Butão',
-  'CV': 'Cabo Verde',
-  'CM': 'Camarões',
-  'KH': 'Camboja',
-  'CA': 'Canadá',
-  'QA': 'Catar',
-  'KZ': 'Cazaquistão',
-  'TD': 'Chade',
-  'CL': 'Chile',
-  'CN': 'China',
-  'CY': 'Chipre',
-  'CO': 'Colômbia',
-  'KM': 'Comores',
-  'CG': 'Congo',
-  'CD': 'Congo (Rep. Dem.)',
-  'KP': 'Coreia do Norte',
-  'KR': 'Coreia do Sul',
-  'CI': 'Costa do Marfim',
-  'CR': 'Costa Rica',
-  'HR': 'Croácia',
-  'CU': 'Cuba',
-  'DK': 'Dinamarca',
-  'DJ': 'Djibuti',
-  'DM': 'Dominica',
-  'EG': 'Egito',
-  'SV': 'El Salvador',
-  'AE': 'Emirados Árabes Unidos',
-  'EC': 'Equador',
-  'ER': 'Eritreia',
-  'SK': 'Eslováquia',
-  'SI': 'Eslovênia',
-  'ES': 'Espanha',
-  'US': 'Estados Unidos',
-  'EE': 'Estônia',
-  'ET': 'Etiópia',
-  'FJ': 'Fiji',
-  'PH': 'Filipinas',
-  'FI': 'Finlândia',
-  'FR': 'França',
-  'GA': 'Gabão',
-  'GM': 'Gâmbia',
-  'GH': 'Gana',
-  'GE': 'Geórgia',
-  'GD': 'Granada',
-  'GR': 'Grécia',
-  'GT': 'Guatemala',
-  'GY': 'Guiana',
-  'GN': 'Guiné',
-  'GW': 'Guiné-Bissau',
-  'GQ': 'Guiné Equatorial',
-  'HT': 'Haiti',
-  'HN': 'Honduras',
-  'HU': 'Hungria',
-  'YE': 'Iêmen',
-  'IN': 'Índia',
-  'ID': 'Indonésia',
-  'IQ': 'Iraque',
-  'IR': 'Irã',
-  'IE': 'Irlanda',
-  'IS': 'Islândia',
-  'IL': 'Israel',
-  'IT': 'Itália',
-  'JM': 'Jamaica',
-  'JP': 'Japão',
-  'JO': 'Jordânia',
-  'KW': 'Kuwait',
-  'LA': 'Laos',
-  'LS': 'Lesoto',
-  'LV': 'Letônia',
-  'LB': 'Líbano',
-  'LR': 'Libéria',
-  'LY': 'Líbia',
-  'LI': 'Liechtenstein',
-  'LT': 'Lituânia',
-  'LU': 'Luxemburgo',
-  'MK': 'Macedônia do Norte',
-  'MG': 'Madagascar',
-  'MY': 'Malásia',
-  'MW': 'Malávi',
-  'MV': 'Maldivas',
-  'ML': 'Mali',
-  'MT': 'Malta',
-  'MA': 'Marrocos',
-  'MH': 'Marshall',
-  'MU': 'Maurício',
-  'MR': 'Mauritânia',
-  'MX': 'México',
-  'FM': 'Micronésia',
-  'MZ': 'Moçambique',
-  'MD': 'Moldávia',
-  'MC': 'Mônaco',
-  'MN': 'Mongólia',
-  'ME': 'Montenegro',
-  'NA': 'Namíbia',
-  'NR': 'Nauru',
-  'NP': 'Nepal',
-  'NI': 'Nicarágua',
-  'NE': 'Níger',
-  'NG': 'Nigéria',
-  'NO': 'Noruega',
-  'NZ': 'Nova Zelândia',
-  'OM': 'Omã',
-  'NL': 'Países Baixos',
-  'PW': 'Palau',
-  'PA': 'Panamá',
-  'PG': 'Papua Nova Guiné',
-  'PK': 'Paquistão',
-  'PY': 'Paraguai',
-  'PE': 'Peru',
-  'PL': 'Polônia',
-  'PT': 'Portugal',
-  'KE': 'Quênia',
-  'KG': 'Quirguistão',
-  'KI': 'Quiribáti',
-  'GB': 'Reino Unido',
-  'CF': 'Rep. Centro-Africana',
-  'CZ': 'Rep. Tcheca',
-  'DO': 'Rep. Dominicana',
-  'RO': 'Romênia',
-  'RW': 'Ruanda',
-  'RU': 'Rússia',
-  'WS': 'Samoa',
-  'SM': 'San Marino',
-  'LC': 'Santa Lúcia',
-  'KN': 'São Cristóvão e Nevis',
-  'ST': 'São Tomé e Príncipe',
-  'VC': 'São Vicente e Granadinas',
-  'SC': 'Seicheles',
-  'SN': 'Senegal',
-  'SL': 'Serra Leoa',
-  'RS': 'Sérvia',
-  'SG': 'Singapura',
-  'SY': 'Síria',
-  'SO': 'Somália',
-  'LK': 'Sri Lanka',
-  'SZ': 'Suazilândia',
-  'SD': 'Sudão',
-  'SS': 'Sudão do Sul',
-  'SE': 'Suécia',
-  'CH': 'Suíça',
-  'SR': 'Suriname',
-  'TH': 'Tailândia',
-  'TZ': 'Tanzânia',
-  'TJ': 'Tadjiquistão',
-  'TL': 'Timor-Leste',
-  'TG': 'Togo',
-  'TO': 'Tonga',
-  'TT': 'Trinidad e Tobago',
-  'TN': 'Tunísia',
-  'TM': 'Turcomenistão',
-  'TR': 'Turquia',
-  'TV': 'Tuvalu',
-  'UA': 'Ucrânia',
-  'UG': 'Uganda',
-  'UY': 'Uruguai',
-  'UZ': 'Uzbequistão',
-  'VU': 'Vanuatu',
-  'VA': 'Vaticano',
-  'VE': 'Venezuela',
-  'VN': 'Vietnã',
-  'ZM': 'Zâmbia',
-  'ZW': 'Zimbábue'
+  'AF': 'Afeganistão','ZA': 'África do Sul','AL': 'Albânia','DE': 'Alemanha','AD': 'Andorra','AO': 'Angola','AG': 'Antígua e Barbuda','SA': 'Arábia Saudita','DZ': 'Argélia','AR': 'Argentina','AM': 'Armênia','AU': 'Austrália','AT': 'Áustria','AZ': 'Azerbaijão','BS': 'Bahamas','BD': 'Bangladesh','BB': 'Barbados','BH': 'Bahrein','BE': 'Bélgica','BZ': 'Belize','BJ': 'Benin','BY': 'Belarus','BO': 'Bolívia','BA': 'Bósnia e Herzegovina','BW': 'Botsuana','BR': 'Brasil','BN': 'Brunei','BG': 'Bulgária','BF': 'Burkina Faso','BI': 'Burundi','BT': 'Butão','CV': 'Cabo Verde','CM': 'Camarões','KH': 'Camboja','CA': 'Canadá','QA': 'Catar','KZ': 'Cazaquistão','TD': 'Chade','CL': 'Chile','CN': 'China','CY': 'Chipre','CO': 'Colômbia','KM': 'Comores','CG': 'Congo','CD': 'Congo (Rep. Dem.)','KP': 'Coreia do Norte','KR': 'Coreia do Sul','CI': 'Costa do Marfim','CR': 'Costa Rica','HR': 'Croácia','CU': 'Cuba','DK': 'Dinamarca','DJ': 'Djibuti','DM': 'Dominica','EG': 'Egito','SV': 'El Salvador','AE': 'Emirados Árabes Unidos','EC': 'Equador','ER': 'Eritreia','SK': 'Eslováquia','SI': 'Eslovênia','ES': 'Espanha','US': 'Estados Unidos','EE': 'Estônia','ET': 'Etiópia','FJ': 'Fiji','PH': 'Filipinas','FI': 'Finlândia','FR': 'França','GA': 'Gabão','GM': 'Gâmbia','GH': 'Gana','GE': 'Geórgia','GD': 'Granada','GR': 'Grécia','GT': 'Guatemala','GY': 'Guiana','GN': 'Guiné','GW': 'Guiné-Bissau','GQ': 'Guiné Equatorial','HT': 'Haiti','HN': 'Honduras','HU': 'Hungria','YE': 'Iêmen','IN': 'Índia','ID': 'Indonésia','IQ': 'Iraque','IR': 'Irã','IE': 'Irlanda','IS': 'Islândia','IL': 'Israel','IT': 'Itália','JM': 'Jamaica','JP': 'Japão','JO': 'Jordânia','KW': 'Kuwait','LA': 'Laos','LS': 'Lesoto','LV': 'Letônia','LB': 'Líbano','LR': 'Libéria','LY': 'Líbia','LI': 'Liechtenstein','LT': 'Lituânia','LU': 'Luxemburgo','MK': 'Macedônia do Norte','MG': 'Madagascar','MY': 'Malásia','MW': 'Malávi','MV': 'Maldivas','ML': 'Mali','MT': 'Malta','MA': 'Marrocos','MH': 'Marshall','MU': 'Maurício','MR': 'Mauritânia','MX': 'México','FM': 'Micronésia','MZ': 'Moçambique','MD': 'Moldávia','MC': 'Mônaco','MN': 'Mongólia','ME': 'Montenegro','NA': 'Namíbia','NR': 'Nauru','NP': 'Nepal','NI': 'Nicarágua','NE': 'Níger','NG': 'Nigéria','NO': 'Noruega','NZ': 'Nova Zelândia','OM': 'Omã','NL': 'Países Baixos','PW': 'Palau','PA': 'Panamá','PG': 'Papua Nova Guiné','PK': 'Paquistão','PY': 'Paraguai','PE': 'Peru','PL': 'Polônia','PT': 'Portugal','KE': 'Quênia','KG': 'Quirguistão','KI': 'Quiribáti','GB': 'Reino Unido','CF': 'Rep. Centro-Africana','CZ': 'Rep. Tcheca','DO': 'Rep. Dominicana','RO': 'Romênia','RW': 'Ruanda','RU': 'Rússia','WS': 'Samoa','SM': 'San Marino','LC': 'Santa Lúcia','KN': 'São Cristóvão e Nevis','ST': 'São Tomé e Príncipe','VC': 'São Vicente e Granadinas','SC': 'Seicheles','SN': 'Senegal','SL': 'Serra Leoa','RS': 'Sérvia','SG': 'Singapura','SY': 'Síria','SO': 'Somália','LK': 'Sri Lanka','SZ': 'Suazilândia','SD': 'Sudão','SS': 'Sudão do Sul','SE': 'Suécia','CH': 'Suíça','SR': 'Suriname','TH': 'Tailândia','TZ': 'Tanzânia','TJ': 'Tadjiquistão','TL': 'Timor-Leste','TG': 'Togo','TO': 'Tonga','TT': 'Trinidad e Tobago','TN': 'Tunísia','TM': 'Turcomenistão','TR': 'Turquia','TV': 'Tuvalu','UA': 'Ucrânia','UG': 'Uganda','UY': 'Uruguai','UZ': 'Uzbequistão','VU': 'Vanuatu','VA': 'Vaticano','VE': 'Venezuela','VN': 'Vietnã','ZM': 'Zâmbia','ZW': 'Zimbábue'
 };
 
-/* Retorna a URL da imagem da bandeira (flagcdn.com — funciona em todos os sistemas) */
 function flagUrl(codigo, tamanho){
   const c = String(codigo || 'BR').toLowerCase();
   return 'https://flagcdn.com/w' + (tamanho || 40) + '/' + c + '.png';
 }
 
-/* Retorna o nome do país */
 function paisNome(codigo){
   return PAISES[codigo] || 'Brasil';
 }
 
-/* Lista ordenada alfabeticamente (pt-BR) para popular selects */
 const PAISES_ORDENADOS = Object.keys(PAISES).map(cod => ({ cod, nome: PAISES[cod] }))
   .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-/* Preenche os selects de país (novo) após o DOM */
 function popularSelectPais(){
   const sel = document.getElementById('novoPais');
   if (!sel) return;
@@ -1907,27 +1712,12 @@ for(const line of RAW.split('\n')){
   const peso = parseFloat(p[5]);
   if(!isFinite(peso) || peso <= 0) continue;
   DATA.push({
-    ref: p[0],
-    img: p[1] || '',
-    marca: p[2] || 'OUTROS',
-    modelo: p[3] || '—',
-    cod: (p[4] || '—').split(';').filter(Boolean),
-    peso: peso,
-    pd: parseFloat(p[6]) || 0,
-    pt: parseFloat(p[7]) || 0,
-    rh: parseFloat(p[8]) || 0,
-    peso2: parseFloat(p[9]) || 0,
-    pd2: parseFloat(p[10]) || 0,
-    pt2: parseFloat(p[11]) || 0,
-    rh2: parseFloat(p[12]) || 0,
-    peso3: parseFloat(p[13]) || 0,
-    pd3: parseFloat(p[14]) || 0,
-    pt3: parseFloat(p[15]) || 0,
-    rh3: parseFloat(p[16]) || 0,
-    peso4: parseFloat(p[17]) || 0,
-    pd4: parseFloat(p[18]) || 0,
-    pt4: parseFloat(p[19]) || 0,
-    rh4: parseFloat(p[20]) || 0,
+    ref: p[0], img: p[1] || '', marca: p[2] || 'OUTROS', modelo: p[3] || '—',
+    cod: (p[4] || '—').split(';').filter(Boolean), peso: peso,
+    pd: parseFloat(p[6]) || 0, pt: parseFloat(p[7]) || 0, rh: parseFloat(p[8]) || 0,
+    peso2: parseFloat(p[9]) || 0, pd2: parseFloat(p[10]) || 0, pt2: parseFloat(p[11]) || 0, rh2: parseFloat(p[12]) || 0,
+    peso3: parseFloat(p[13]) || 0, pd3: parseFloat(p[14]) || 0, pt3: parseFloat(p[15]) || 0, rh3: parseFloat(p[16]) || 0,
+    peso4: parseFloat(p[17]) || 0, pd4: parseFloat(p[18]) || 0, pt4: parseFloat(p[19]) || 0, rh4: parseFloat(p[20]) || 0,
     pais: 'BR'
   });
 }
@@ -1948,9 +1738,6 @@ try {
   }
 } catch(e) { console.warn('[catálogo]', e); }
 
-/* =========================================================
-   CONFIGURAÇÕES DE CÁLCULO
-   ========================================================= */
 const OZT_KG = 32.1507;
 const DEFAULT_CFG = {
   pd: 1287, pt: 962, rh: 5250, dolar: 4.25,
@@ -2380,7 +2167,6 @@ function openEditModal(item){
   const first = document.getElementById('edRef');
   if(first) first.focus();
 
-  /* Atualiza a bandeira grande quando o usuário troca o país */
   const selPais = document.getElementById('edPais');
   const imgPais = document.getElementById('edPaisFlag');
   if (selPais && imgPais) {
@@ -2652,13 +2438,11 @@ function pesqCardHTML(it){
     : `<span class="price muted">—</span>`;
   const discTag = '';
 
-  /* ====== BANDEIRA DO PAÍS (imagem, funciona em qualquer SO) ====== */
   const paisCod = it.pais || 'BR';
   const paisTxt = paisNome(paisCod);
   const flagHTML = `<span class="pesq-flag-badge" title="${esc(paisTxt)}">
     <img src="${flagUrl(paisCod, 40)}" alt="${esc(paisTxt)}" onerror="this.style.display='none'">
   </span>`;
-  /* =============================================================== */
 
   return `<article class="pesq-card" data-ref="${esc(it.ref)}">
     <div class="img">${img}</div>
@@ -2915,7 +2699,6 @@ document.getElementById('btnCota').addEventListener('click', () => {
   } else alert('Valores inválidos. Use números separados por vírgula.');
 });
 
-/* Popula o select "País" da aba Novo e mantém a bandeira sincronizada */
 document.addEventListener('DOMContentLoaded', () => {
   popularSelectPais();
   const sel = document.getElementById('novoPais');
@@ -4542,6 +4325,166 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(function(e){ console.warn('[SW] register:', e && e.message); });
   });
+})();
+</script>
+
+<!-- ============================================================
+     CARREGADOR — COLEÇÃO "produtos_visivel" (FIRESTORE)
+     Lê cada documento da coleção (item_000000, item_000001, ...)
+     e transforma em um item do array DATA do app.
+     ============================================================ -->
+<script>
+(function produtosVisivelLoader(){
+  'use strict';
+
+  function waitForFirestore(maxMs){
+    return new Promise(function(resolve){
+      var started = Date.now();
+      (function check(){
+        if (window.__firebaseSync && window.__firebaseSync.db) return resolve(window.__firebaseSync.db);
+        if (Date.now() - started > maxMs) return resolve(null);
+        setTimeout(check, 120);
+      })();
+    });
+  }
+
+  function toNum(v){
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    var s = String(v == null ? '' : v).replace(',', '.').trim();
+    if (!s) return 0;
+    var n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
+
+  function normalizeDoc(doc){
+    var d = doc.data() || {};
+    var raw = d;
+    // Alguns documentos podem vir no formato { value: "<json>", updatedAt: ... }
+    if (typeof d.value === 'string'){
+      try { raw = JSON.parse(d.value); } catch(e){ raw = d; }
+    }
+    if (!raw || typeof raw !== 'object') return null;
+
+    // ---- Referência interna
+    var ref = '';
+    if (raw.ref !== undefined && raw.ref !== null && String(raw.ref).trim() !== ''){
+      ref = String(raw.ref).trim();
+    } else if (raw._indice !== undefined){
+      ref = String(raw._indice);
+    } else {
+      var m = String(doc.id).match(/(\d+)/);
+      ref = m ? String(parseInt(m[1], 10)) : doc.id;
+    }
+
+    // ---- Códigos (array, string com ';' ou valor único)
+    var cod = [];
+    if (Array.isArray(raw.cod)){
+      cod = raw.cod.map(String).map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if (typeof raw.cod === 'string' && raw.cod.trim()){
+      cod = raw.cod.split(';').map(function(s){ return s.trim(); }).filter(Boolean);
+    } else if (raw.cod !== undefined && raw.cod !== null){
+      cod = [String(raw.cod).trim()].filter(Boolean);
+    }
+    if (!cod.length) cod = ['—'];
+
+    return {
+      ref: ref,
+      img: raw.img || raw.foto || '',
+      marca: raw.marca || 'OUTROS',
+      modelo: raw.modelo || '—',
+      cod: cod,
+      peso:  toNum(raw.peso  != null ? raw.peso  : raw.kg),
+      pd:    toNum(raw.pd),
+      pt:    toNum(raw.pt),
+      rh:    toNum(raw.rh),
+      peso2: toNum(raw.peso2 != null ? raw.peso2 : raw.kg2),
+      pd2:   toNum(raw.pd2),
+      pt2:   toNum(raw.pt2),
+      rh2:   toNum(raw.rh2),
+      peso3: toNum(raw.peso3 != null ? raw.peso3 : raw.kg3),
+      pd3:   toNum(raw.pd3),
+      pt3:   toNum(raw.pt3),
+      rh3:   toNum(raw.rh3),
+      peso4: toNum(raw.peso4 != null ? raw.peso4 : raw.kg4),
+      pd4:   toNum(raw.pd4),
+      pt4:   toNum(raw.pt4),
+      rh4:   toNum(raw.rh4),
+      pais:  raw.pais || 'BR',
+      _docId: doc.id
+    };
+  }
+
+  async function load(){
+    var db = await waitForFirestore(12000);
+    if (!db){
+      console.warn('[produtos_visivel] Firestore indisponível — mantendo dados atuais.');
+      return;
+    }
+    var snap;
+    try {
+      snap = await db.collection('produtos_visivel').get();
+    } catch(e){
+      console.warn('[produtos_visivel] Erro ao ler coleção:', e && e.message);
+      return;
+    }
+    if (snap.empty){
+      console.log('[produtos_visivel] Coleção vazia — mantendo dados atuais.');
+      return;
+    }
+
+    var items = [];
+    snap.forEach(function(doc){
+      var it = normalizeDoc(doc);
+      if (it) items.push(it);
+    });
+    if (!items.length){
+      console.warn('[produtos_visivel] Nenhum documento válido encontrado.');
+      return;
+    }
+
+    // Ordena por ref numérica quando possível
+    items.sort(function(a, b){
+      var na = parseInt(a.ref, 10), nb = parseInt(b.ref, 10);
+      if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
+      return String(a.ref).localeCompare(String(b.ref), 'pt-BR', { numeric: true });
+    });
+
+    // Substitui o conteúdo do array DATA (sem trocar a referência)
+    try {
+      DATA.length = 0;
+      for (var i = 0; i < items.length; i++) DATA.push(items[i]);
+    } catch(e){
+      console.warn('[produtos_visivel] Falha ao substituir DATA:', e && e.message);
+      return;
+    }
+
+    // Persiste no localStorage para que o resto do app (edição, etc.)
+    // continue funcionando normalmente. O sync do Firebase espelha em
+    // appData/paizao_catalisadores automaticamente.
+    try {
+      var mirror = DATA.map(function(it){
+        var c = Object.assign({}, it);
+        delete c._docId;
+        return c;
+      });
+      localStorage.setItem('paizao_catalisadores', JSON.stringify(mirror));
+    } catch(e){ /* quota cheia — ignora */ }
+
+    // Re-render
+    try { if (typeof refreshMarcaOptions === 'function') refreshMarcaOptions(); } catch(e){}
+    var badge = document.getElementById('tabCount');
+    if (badge) badge.textContent = DATA.length;
+    try { if (typeof render === 'function') render(); } catch(e){}
+    try { if (typeof renderPesq === 'function') renderPesq(); } catch(e){}
+
+    console.log('[produtos_visivel] ' + items.length + ' produto(s) carregado(s) do Firestore.');
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 150); });
+  } else {
+    setTimeout(load, 150);
+  }
 })();
 </script>
 
