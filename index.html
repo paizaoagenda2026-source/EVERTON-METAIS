@@ -661,7 +661,7 @@
         </svg>
         Entrar com Reconhecimento Facial
       </button>
-      <button type="button" class="login-btn install" id="loginInstallBtn" style="display:none">
+      <button type="button" class="login-btn install" id="loginInstallBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3v12"/>
@@ -4252,7 +4252,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function hideBoth(){ if (btnTop) btnTop.style.display = 'none'; if (btnLogin) btnLogin.style.display = 'none'; }
   function showBoth(){ if (btnTop) btnTop.style.display = 'inline-flex'; if (btnLogin) btnLogin.style.display = 'flex'; }
+  /* Se já está instalado (standalone), esconde tudo e sai */
   if (isStandalone()){ hideBoth(); return; }
+  /* Não instalado: mostra o botão de instalar já na tela de login */
+  if (btnLogin) btnLogin.style.display = 'flex';
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; showBoth(); });
   async function triggerInstall(){
     if (!deferredPrompt){
