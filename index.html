@@ -489,7 +489,6 @@
   .pesq-count-info{text-align:center;font-size:11.5px;color:#93a2b3;
     text-transform:none;letter-spacing:0;font-weight:500;margin-top:6px}
 
-  /* ========== BANDEIRAS (imagem, funciona em todos os sistemas) ========== */
   .flag-img{
     display:inline-block;
     width:26px;
@@ -555,7 +554,6 @@
     width:22px;height:15px;object-fit:cover;border-radius:2px;
     border:1px solid #dbe4ee;
   }
-  /* ====================================================================== */
 
   @media(max-width:640px){
     .topbar{padding:0 14px}.wrap{padding:14px}.tabs{padding:0 8px;top:64px}
@@ -4330,8 +4328,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ============================================================
      CARREGADOR — COLEÇÃO "produtos_visivel" (FIRESTORE)
-     Lê cada documento da coleção (item_000000, item_000001, ...)
-     e transforma em um item do array DATA do app.
+     Lê os documentos da coleção e mescla no DATA sem sobrescrever
+     dados locais existentes. Só carrega se DATA estiver vazio.
      ============================================================ -->
 <script>
 (function produtosVisivelLoader(){
@@ -4365,7 +4363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (!raw || typeof raw !== 'object') return null;
 
-    // ---- Referência interna
+    // Referência interna
     var ref = '';
     if (raw.ref !== undefined && raw.ref !== null && String(raw.ref).trim() !== ''){
       ref = String(raw.ref).trim();
@@ -4376,7 +4374,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ref = m ? String(parseInt(m[1], 10)) : doc.id;
     }
 
-    // ---- Códigos (array, string com ';' ou valor único)
+    // Códigos
     var cod = [];
     if (Array.isArray(raw.cod)){
       cod = raw.cod.map(String).map(function(s){ return s.trim(); }).filter(Boolean);
@@ -4415,6 +4413,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function load(){
+    // Só carrega do Firestore se DATA estiver vazio (protege dados locais)
+    if (Array.isArray(DATA) && DATA.length > 0){
+      console.log('[produtos_visivel] DATA já possui ' + DATA.length + ' item(ns) — leitura do Firestore ignorada para economizar cotas.');
+      return;
+    }
     var db = await waitForFirestore(12000);
     if (!db){
       console.warn('[produtos_visivel] Firestore indisponível — mantendo dados atuais.');
@@ -4442,7 +4445,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Ordena por ref numérica quando possível
+    // Ordena por referência numérica quando possível
     items.sort(function(a, b){
       var na = parseInt(a.ref, 10), nb = parseInt(b.ref, 10);
       if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
@@ -4458,9 +4461,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Persiste no localStorage para que o resto do app (edição, etc.)
-    // continue funcionando normalmente. O sync do Firebase espelha em
-    // appData/paizao_catalisadores automaticamente.
+    // Persiste no localStorage — o FirebaseSync espelha em appData/paizao_catalisadores
     try {
       var mirror = DATA.map(function(it){
         var c = Object.assign({}, it);
@@ -4481,9 +4482,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 150); });
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(load, 400); });
   } else {
-    setTimeout(load, 150);
+    setTimeout(load, 400);
   }
 })();
 </script>
