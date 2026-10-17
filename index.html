@@ -47,6 +47,168 @@
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="manifest" href="manifest.json">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- ============================================================
+     FIREBASE — SINCRONIZAÇÃO AUTOMÁTICA
+     ============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function firebaseSync(){
+  'use strict';
+  try {
+    if (typeof firebase === 'undefined') {
+      console.warn('[Firebase] SDK não carregado — o app continuará funcionando no localStorage.');
+      return;
+    }
+
+    var firebaseConfig = {
+      apiKey: "AIzaSyCgwHdfqspyAJUZPrdOW6Rh_xB0XAAG3Ro",
+      authDomain: "everton-metais.firebaseapp.com",
+      projectId: "everton-metais",
+      storageBucket: "everton-metais.firebasestorage.app",
+      messagingSenderId: "1097175513635",
+      appId: "1:1097175513635:web:2df1edb5869c458392cf96",
+      measurementId: "G-JLV1P0S5Q4"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+
+    var KEYS = [
+      'paizao_catalisadores',
+      'paizao_catalisador_cfg',
+      'paizao_usuarios',
+      'paizao_clientes',
+      'paizao_compra_venda_po',
+      'paizao_auditoria',
+      'paizao_carrinho',
+      'paizao_pedidos',
+      'paizao_pedido_counter'
+    ];
+    var COLLECTION = 'appData';
+
+    var _setItem    = Storage.prototype.setItem;
+    var _removeItem = Storage.prototype.removeItem;
+    var _getItem    = Storage.prototype.getItem;
+
+    var pending = {};
+
+    function flushWrite(key){
+      if (!(key in pending)) return;
+      var value = pending[key];
+      delete pending[key];
+      if (pending['__timer_' + key]) {
+        clearTimeout(pending['__timer_' + key]);
+        delete pending['__timer_' + key];
+      }
+      try {
+        db.collection(COLLECTION).doc(key).set({
+          value: value,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(function(e){
+          console.warn('[Firebase write]', key, e && e.message);
+        });
+      } catch(e){
+        console.warn('[Firebase write]', key, e && e.message);
+      }
+    }
+
+    function scheduleWrite(key, value){
+      pending[key] = value;
+      if (pending['__timer_' + key]) clearTimeout(pending['__timer_' + key]);
+      pending['__timer_' + key] = setTimeout(function(){ flushWrite(key); }, 500);
+    }
+
+    function fbDelete(key){
+      if (pending['__timer_' + key]) { clearTimeout(pending['__timer_' + key]); delete pending['__timer_' + key]; }
+      delete pending[key];
+      try {
+        db.collection(COLLECTION).doc(key).delete().catch(function(e){
+          console.warn('[Firebase delete]', key, e && e.message);
+        });
+      } catch(e){}
+    }
+
+    Storage.prototype.setItem = function(key, value){
+      _setItem.call(this, key, value);
+      if (this === window.localStorage && KEYS.indexOf(key) !== -1){
+        try { scheduleWrite(key, String(value)); } catch(e){}
+      }
+    };
+
+    Storage.prototype.removeItem = function(key){
+      _removeItem.call(this, key);
+      if (this === window.localStorage && KEYS.indexOf(key) !== -1){
+        try { fbDelete(key); } catch(e){}
+      }
+    };
+
+    window.addEventListener('beforeunload', function(){
+      try {
+        Object.keys(pending).forEach(function(k){
+          if (k.indexOf('__timer_') === 0) return;
+          flushWrite(k);
+        });
+      } catch(e){}
+    });
+
+    (async function restore(){
+      try {
+        var snapshot = await db.collection(COLLECTION).get();
+
+        if (snapshot.empty){
+          KEYS.forEach(function(key){
+            try {
+              var local = _getItem.call(localStorage, key);
+              if (local !== null && local !== undefined) {
+                db.collection(COLLECTION).doc(key).set({
+                  value: local,
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true }).catch(function(){});
+              }
+            } catch(e){}
+          });
+          return;
+        }
+
+        var restored = 0;
+        snapshot.forEach(function(doc){
+          var key = doc.id;
+          if (KEYS.indexOf(key) === -1) return;
+          var data = doc.data() || {};
+          var value = data.value;
+          if (typeof value !== 'string') return;
+          var localValue = null;
+          try { localValue = _getItem.call(localStorage, key); } catch(e){}
+          if (localValue === null || localValue === '' || localValue === '[]' || localValue === '{}'){
+            try { _setItem.call(localStorage, key, value); restored++; } catch(e){}
+          }
+        });
+
+        if (restored > 0 && !sessionStorage.getItem('__fb_reloaded')){
+          try { sessionStorage.setItem('__fb_reloaded', '1'); } catch(e){}
+          console.log('[Firebase] ' + restored + ' chave(s) restaurada(s) — recarregando...');
+          location.reload();
+          return;
+        }
+        if (restored > 0) {
+          console.log('[Firebase] ' + restored + ' chave(s) restaurada(s) do backup.');
+        }
+      } catch(e){
+        console.warn('[Firebase load]', e && e.message);
+      }
+    })();
+
+    window.__firebaseSync = { db: db, KEYS: KEYS, COLLECTION: COLLECTION, flushWrite: flushWrite };
+    console.log('[Firebase] Sincronização ativa · projeto: everton-metais');
+  } catch(err) {
+    console.warn('[Firebase] Falha na inicialização:', err && err.message);
+  }
+})();
+</script>
+<!-- ============================================================ -->
+
 <style>
   :root{
     --navy:#0f2338;--navy-2:#17324e;--steel:#5b7189;--line:#e2e7ee;--bg:#f4f6f9;
@@ -4252,9 +4414,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function hideBoth(){ if (btnTop) btnTop.style.display = 'none'; if (btnLogin) btnLogin.style.display = 'none'; }
   function showBoth(){ if (btnTop) btnTop.style.display = 'inline-flex'; if (btnLogin) btnLogin.style.display = 'flex'; }
-  /* Se já está instalado (standalone), esconde tudo e sai */
   if (isStandalone()){ hideBoth(); return; }
-  /* Não instalado: mostra o botão de instalar já na tela de login */
   if (btnLogin) btnLogin.style.display = 'flex';
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; showBoth(); });
   async function triggerInstall(){
