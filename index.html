@@ -699,12 +699,20 @@
     filter:drop-shadow(0 3px 10px rgba(245,158,11,.4));}
   .pesq-logo-img{width:56px;height:56px;object-fit:contain;display:block;flex-shrink:0;
     filter:drop-shadow(0 4px 12px rgba(10,143,74,.25));}
-  .login-mark-img{width:90px;height:90px;object-fit:contain;margin:0 auto 16px;display:block;
-    filter:drop-shadow(0 6px 20px rgba(245,158,11,.35));}
+  .login-mark-img{
+    width:100%;
+    max-width:260px;
+    height:auto;
+    max-height:100px;
+    object-fit:contain;
+    margin:0 auto 16px;
+    display:block;
+    filter:drop-shadow(0 6px 20px rgba(245,158,11,.35));
+  }
   @media(max-width:480px){
     .login-card{padding:32px 22px 22px;border-radius:18px}
     .login-brand h1{font-size:20px}
-    .login-mark-img{width:80px;height:80px}
+    .login-mark-img{width:100%;max-width:200px;height:auto;max-height:80px;}
     .login-field input{height:50px}
     .login-btn{height:50px}
   }
