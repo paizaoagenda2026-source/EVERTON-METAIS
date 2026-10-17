@@ -45,7 +45,7 @@
 
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
-<link rel="manifest" id="pwaManifest">
+<link rel="manifest" href="manifest.json">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
@@ -874,7 +874,6 @@
         </div>
       </div>
 
-      <!-- ============ NOVO: PAÍS DE ORIGEM (destaque, linha inteira) ============ -->
       <div class="field" style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;">
         <label for="novoPais" style="color:#15803d;font-weight:700;font-size:13px;">🌎 País de Origem da Peça</label>
         <div class="flag-select-wrap">
@@ -883,7 +882,6 @@
         </div>
         <div class="hint">Selecione o país de origem — a bandeira aparecerá no card da pesquisa.</div>
       </div>
-      <!-- ================================================================== -->
 
       <div class="field" style="margin-top:14px;">
         <label for="novoCod">Códigos separados (por ";")</label>
@@ -2108,7 +2106,6 @@ function openEditModal(item){
         <div class="field"><label>Modelo</label><input id="edModelo" value="${esc(orig.modelo)}"></div>
       </div>
 
-      <!-- ============ NOVO: PAÍS DE ORIGEM (destaque, linha inteira) ============ -->
       <div class="field" style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;">
         <label for="edPais" style="color:#15803d;font-weight:700;font-size:13px;">🌎 País de Origem da Peça</label>
         <div class="flag-select-wrap">
@@ -2117,7 +2114,6 @@ function openEditModal(item){
         </div>
         <div class="hint">Selecione o país de origem — a bandeira aparecerá no card da pesquisa.</div>
       </div>
-      <!-- ====================================================================== -->
 
       <div class="field" style="margin-top:14px;"><label>Códigos (separados por ";")</label>
         <input id="edCod" value="${esc((orig.cod||[]).join(';'))}">
@@ -4247,27 +4243,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 (function pwaSetup(){
   'use strict';
-  try {
-    const logoUrl = new URL('logo.png', location.href).href;
-    const baseUrl = location.href.split('?')[0].split('#')[0];
-    const scopeUrl = baseUrl.replace(/[^/]*$/, '');
-    const manifest = {
-      name: "Everton Metais · Consulta de Catalisadores", short_name: "Everton Metais",
-      description: "Sistema de consulta técnica de catalisadores",
-      start_url: baseUrl, scope: scopeUrl, display: "standalone", orientation: "any",
-      background_color: "#0f2338", theme_color: "#0f2338", lang: "pt-BR",
-      icons: [
-        { src: logoUrl, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: logoUrl, sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: logoUrl, sizes: "512x512", type: "image/png", purpose: "maskable" }
-      ]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-    const url = URL.createObjectURL(blob);
-    let link = document.getElementById('pwaManifest');
-    if (!link) { link = document.createElement('link'); link.id = 'pwaManifest'; link.rel = 'manifest'; document.head.appendChild(link); }
-    link.href = url;
-  } catch(e){ }
   const btnTop = document.getElementById('btnInstall');
   const btnLogin = document.getElementById('loginInstallBtn');
   if (!btnTop && !btnLogin) return;
@@ -4351,7 +4326,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js', { scope: './' })
+    navigator.serviceWorker.register('service-worker.js', { scope: './' })
       .then(function(reg){
         reg.addEventListener('updatefound', function(){
           var nw = reg.installing; if (!nw) return;
