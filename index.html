@@ -1560,7 +1560,7 @@
     </div>
     <div class="footnote">
       Registro automático de <b>dia</b>, <b>hora</b>, <b>mês</b>, <b>local</b>, <b>usuário</b> e <b>ação</b> realizada no sistema.
-      A limpeza dos lançamentos é restrita ao <b>Administrador (ADM)</b> e ao <b>Programador</b>.
+      A limpeza dos lançamentos é restrita ao <b>Administrador (ADM)</b> e ao <b>Programador</b>. Lançamentos com mais de <b>15 dias</b> são removidos automaticamente.
     </div>
   </section>
 </main>
@@ -2831,7 +2831,7 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
   const LS_KEY_USERS = 'paizao_usuarios';
   const ALL_TABS = ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho'];
-  const DEFAULT_SERGIO = { pass: '080888', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice(), selfie: '', nome: 'Sergio' };
+  const DEFAULT_EVERTON = { pass: '986533990', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice(), selfie: '', nome: 'Everton' };
   const DEFAULT_PROG = { pass: '080888', role: 'total', type: 'ADM', label: 'Acesso Total', permissions: ALL_TABS.slice(), selfie: '', nome: 'Programador' };
   let USERS = {};
   try{
@@ -2839,7 +2839,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if(saved && typeof saved === 'object' && !Array.isArray(saved)) USERS = saved;
   }catch(e){ USERS = {}; }
   let seededUsers = false;
-  if(!USERS.SERGIO){ USERS.SERGIO = { ...DEFAULT_SERGIO }; seededUsers = true; }
+  // Migração: SERGIO (senha antiga 080888) → EVERTON (nova senha 986533990)
+  if (USERS.SERGIO && USERS.SERGIO.pass === '080888') {
+    const sergioData = USERS.SERGIO;
+    delete USERS.SERGIO;
+    if (!USERS.EVERTON) {
+      USERS.EVERTON = { ...sergioData, pass: '986533990', nome: 'Everton', label: 'Administrador' };
+    }
+    seededUsers = true;
+  }
+  if(!USERS.EVERTON){ USERS.EVERTON = { ...DEFAULT_EVERTON }; seededUsers = true; }
   if(!USERS.PROGRAMADOR){ USERS.PROGRAMADOR = { ...DEFAULT_PROG }; seededUsers = true; }
   for(const k in USERS){
     const u = USERS[k];
@@ -3345,7 +3354,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const usrSelfiePrev = $('usrSelfiePreview'), usrSelfieRemove = $('usrSelfieRemove');
   const usrSalvarBtn = $('usrSalvarBtn'), usrCancelarBtn = $('usrCancelarBtn');
   const usrTbody = $('usrTbody'), usrCount = $('usrCount'), usrEmpty = $('usrEmpty'), usrFormSub = $('usrFormSub');
-  const PROTECTED = ['SERGIO', 'PROGRAMADOR'];
+  const PROTECTED = ['EVERTON', 'SERGIO', 'PROGRAMADOR'];
   let editUser = null; let selfieData = '';
   function escHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function getAllowedFromUI(){ return Array.from(document.querySelectorAll('[data-perm]')).filter(cb => cb.checked).map(cb => cb.dataset.perm); }
@@ -3853,8 +3862,27 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
   const LS_KEY_AUD = 'paizao_auditoria';
   const MAX_ENTRIES = 5000;
+  const AUTO_CLEAN_DAYS = 15;
   let AUDIT = [];
   try { const saved = JSON.parse(localStorage.getItem(LS_KEY_AUD) || '[]'); if (Array.isArray(saved)) AUDIT = saved; } catch(e){ AUDIT = []; }
+
+  // Auto-limpeza: remove automaticamente lançamentos com mais de 15 dias (executada a cada carga)
+  (function filtrarLancamentosAntigos(){
+    try {
+      const LIMITE_MS = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
+      const agora = Date.now();
+      const antes = AUDIT.length;
+      AUDIT = AUDIT.filter(function(e){
+        const t = (e && e.ts) ? new Date(e.ts).getTime() : 0;
+        if (!t || !isFinite(t)) return true;
+        return (agora - t) < LIMITE_MS;
+      });
+      if (AUDIT.length !== antes){
+        try { localStorage.setItem(LS_KEY_AUD, JSON.stringify(AUDIT)); } catch(_){}
+      }
+    } catch(_){}
+  })();
+
   let userLocation = 'Localização não disponível'; let locationFetched = false;
   async function fetchLocation(){
     if (locationFetched) return; locationFetched = true;
@@ -3941,6 +3969,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', e => { const tab = e.target.closest('.tab[data-tab="auditoria"]'); if (tab) { setTimeout(renderAudit, 60); } });
   renderAudit();
   window.renderAudit = renderAudit;
+
+  // Verificação periódica (a cada 1 hora) — mantém a limpeza de 15 dias em dia
+  setInterval(function(){
+    try {
+      const LIMITE_MS = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
+      const agora = Date.now();
+      const antes = AUDIT.length;
+      AUDIT = AUDIT.filter(function(e){
+        const t = (e && e.ts) ? new Date(e.ts).getTime() : 0;
+        if (!t || !isFinite(t)) return true;
+        return (agora - t) < LIMITE_MS;
+      });
+      if (AUDIT.length !== antes){
+        saveAudit();
+        try { renderAudit(); } catch(_){}
+      }
+    } catch(_){}
+  }, 60 * 60 * 1000);
 })();
 </script>
 
