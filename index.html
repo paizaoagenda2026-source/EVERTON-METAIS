@@ -48,9 +48,6 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- ============================================================
-     FIREBASE — SINCRONIZAÇÃO AUTOMÁTICA (v2 corrigida)
-     ============================================================ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
@@ -249,7 +246,6 @@
   }
 })();
 </script>
-<!-- ============================================================ -->
 
 <style>
   :root{
@@ -827,6 +823,51 @@
     #view-compravendapo .cv-dashboards{grid-template-columns:1fr}
     #view-compravendapo .cv-dash .val{font-size:22px}
   }
+
+  /* ==== botão Autorizado (verde azeitona) e dados do cliente no carrinho ==== */
+  .cart-auth-btn{
+    background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;
+    padding:6px 10px;font-size:10.5px;font-weight:700;cursor:pointer;
+    font-family:inherit;color:#475569;text-transform:uppercase;letter-spacing:.4px;
+    transition:.15s;white-space:nowrap;
+  }
+  .cart-auth-btn:hover{background:#e2e8f0;color:#0f2338}
+  .cart-auth-btn:active{transform:scale(.97)}
+  .cart-auth-btn.authorized{
+    background:#d1fae5;color:#065f46;border-color:#6ee7b7;cursor:default;
+  }
+  .cart-auth-btn.authorized:hover{background:#d1fae5}
+  .cart-client-data .panel-head .sub{color:#15803d;font-weight:600}
+  .cart-client-data .field input[readonly]{
+    background:#f0fdf4 !important;border-color:#bbf7d0 !important;
+    color:#15803d !important;font-weight:600;cursor:default;
+  }
+  .cart-client-data .field input[readonly]:focus{box-shadow:none !important}
+  .pedido-actions { white-space: nowrap; text-align: center; }
+
+  /* ==== NOVO: botão AUTORIZADO verde azeitona no tamanho do PDF ==== */
+  .row-edit.auth-olive{
+    background:#556B2F !important;
+    color:#fff !important;
+    border-color:#4a5e28 !important;
+    font-size:14px;
+    font-weight:800;
+  }
+  .row-edit.auth-olive:hover{
+    background:#6b8e23 !important;
+    color:#fff !important;
+    border-color:#556B2F !important;
+  }
+
+  /* ==== NOVO: coluna autorizado por no histórico ==== */
+  #view-historicocompras td.hist-autorizado{
+    font-weight:700;color:#556B2F;text-align:center;
+    white-space:nowrap;
+  }
+  #view-historicocompras td.hist-data-aut{
+    font-size:11.5px;color:#5a6a7d;text-align:center;
+    white-space:nowrap;
+  }
 </style>
 </head>
 <body>
@@ -1007,6 +1048,7 @@
   <button class="tab" data-tab="usuarios">Usuários</button>
   <button class="tab" data-tab="auditoria">Auditoria</button>
   <button class="tab" data-tab="carrinho" id="tabCarrinho">Carrinho</button>
+  <button class="tab" data-tab="historicocompras" id="tabHistoricoCompras">Histórico Compras</button>
 </nav>
 
 <main class="wrap hidden" id="view-catalisador">
@@ -1468,6 +1510,8 @@
           <label><input type="checkbox" data-perm="usuarios"> Usuários</label>
           <label><input type="checkbox" data-perm="auditoria"> Auditoria</label>
           <label><input type="checkbox" data-perm="carrinho"> Carrinho</label>
+          <label><input type="checkbox" data-perm="historicocompras"> Histórico Compras</label>
+          <label><input type="checkbox" data-perm="dados_cliente_carrinho"> Dados do Cliente (Carrinho)</label>
         </div>
       </div>
       <div class="field">
@@ -1566,6 +1610,29 @@
 </main>
 
 <main class="wrap hidden" id="view-carrinho">
+  <section class="panel cart-client-data" id="cartClientDataPanel" style="display:none;">
+    <div class="panel-head">
+      <h2>Dados do Cliente</h2>
+      <span class="sub" id="cartClientDataSub">Dados cadastrados do usuário logado</span>
+    </div>
+    <div class="form-body">
+      <div class="grid2">
+        <div class="field"><label>Nome completo</label><input type="text" id="cdNome" readonly></div>
+        <div class="field"><label>Fone (com DDD)</label><input type="text" id="cdFone" readonly></div>
+        <div class="field"><label>Endereço</label><input type="text" id="cdEnd" readonly></div>
+        <div class="field"><label>Bairro</label><input type="text" id="cdBairro" readonly></div>
+        <div class="field"><label>Cidade</label><input type="text" id="cdCidade" readonly></div>
+        <div class="field"><label>UF</label><input type="text" id="cdUf" readonly></div>
+        <div class="field"><label>CPF</label><input type="text" id="cdCpf" readonly></div>
+        <div class="field"><label>RG</label><input type="text" id="cdRg" readonly></div>
+        <div class="field"><label>Banco</label><input type="text" id="cdBanco" readonly></div>
+        <div class="field"><label>Agência</label><input type="text" id="cdAgencia" readonly></div>
+        <div class="field"><label>Conta</label><input type="text" id="cdConta" readonly></div>
+        <div class="field"><label>PIX</label><input type="text" id="cdPix" readonly></div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel">
     <div class="panel-head">
       <h2>Carrinho de Compras</h2>
@@ -1622,7 +1689,7 @@
             <th>Cliente</th><th>Fone</th>
             <th style="width:90px;text-align:right">Itens</th>
             <th style="width:130px;text-align:right">Total</th>
-            <th style="width:130px;text-align:center">Ações</th>
+            <th style="width:180px;text-align:center">Ações</th>
           </tr>
         </thead>
         <tbody id="pedidosTbody"></tbody>
@@ -1630,11 +1697,46 @@
     </div>
     <div class="empty hidden" id="pedidosEmpty">
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <h3>Nenhum pedido salvo</h3>
-      <p>Gere um PDF no carrinho para salvar um novo pedido.</p>
+      <h3>Nenhum pedido pendente</h3>
+      <p>Gere um PDF no carrinho para criar um novo pedido. Após a autorização, ele aparecerá em Histórico Compras.</p>
     </div>
     <div class="footnote">
       O acesso aos PDFs dos pedidos é restrito aos usuários <b>ADM</b>, <b>Programador</b>, <b>Triagem</b> e <b>Financeiro</b>.
+    </div>
+  </section>
+</main>
+
+<!-- =================== NOVO: HISTÓRICO COMPRAS =================== -->
+<main class="wrap hidden" id="view-historicocompras">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Histórico de Compras</h2>
+      <span class="sub" id="historicoSub">Pedidos autorizados</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px">Número</th>
+            <th style="width:160px">Data/Hora</th>
+            <th>Cliente</th><th>Fone</th>
+            <th style="width:90px;text-align:right">Itens</th>
+            <th style="width:130px;text-align:right">Total</th>
+            <th style="width:160px;text-align:center">Autorizado por</th>
+            <th style="width:160px;text-align:center">Data Autorização</th>
+            <th style="width:120px;text-align:center">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="historicoTbody"></tbody>
+      </table>
+    </div>
+    <div class="empty hidden" id="historicoEmpty">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      <h3>Nenhum pedido autorizado ainda</h3>
+      <p>Os pedidos autorizados aparecerão aqui automaticamente.</p>
+    </div>
+    <div class="footnote">
+      Pedidos <b>autorizados</b> são transferidos automaticamente para esta aba. O botão <b>📄</b> abre o PDF com o campo <b>"Autorizado por"</b> preenchido.
     </div>
   </section>
 </main>
@@ -2370,6 +2472,16 @@ document.querySelectorAll('.tab').forEach(btn => {
     if(vaud) vaud.classList.toggle('hidden', t !== 'auditoria');
     const vcart = document.getElementById('view-carrinho');
     if(vcart) vcart.classList.toggle('hidden', t !== 'carrinho');
+    // NOVO: alterna a view do Histórico Compras
+    const vhist = document.getElementById('view-historicocompras');
+    if(vhist) vhist.classList.toggle('hidden', t !== 'historicocompras');
+    if (t === 'historicocompras' && typeof window.renderHistorico === 'function') {
+      try { window.renderHistorico(); } catch(_){}
+    }
+    // NOVO: atualiza visibilidade do painel "Dados do Cliente" ao abrir carrinho
+    if (t === 'carrinho' && typeof window.updateCartClientDataVisibility === 'function') {
+      try { window.updateCartClientDataVisibility(); } catch(_){}
+    }
   });
 });
 
@@ -2830,9 +2942,10 @@ document.addEventListener('DOMContentLoaded', () => {
 (function loginSystem(){
   'use strict';
   const LS_KEY_USERS = 'paizao_usuarios';
-  const ALL_TABS = ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho'];
-  const DEFAULT_EVERTON = { pass: '986533990', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice(), selfie: '', nome: 'Everton' };
-  const DEFAULT_PROG = { pass: '080888', role: 'total', type: 'ADM', label: 'Acesso Total', permissions: ALL_TABS.slice(), selfie: '', nome: 'Programador' };
+  const ALL_TABS = ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras'];
+  const EXTRA_PERMS = ['dados_cliente_carrinho'];
+  const DEFAULT_EVERTON = { pass: '986533990', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Everton' };
+  const DEFAULT_PROG = { pass: '080888', role: 'total', type: 'ADM', label: 'Acesso Total', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Programador' };
   let USERS = {};
   try{
     const saved = JSON.parse(localStorage.getItem(LS_KEY_USERS) || 'null');
@@ -2850,6 +2963,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if(!USERS.EVERTON){ USERS.EVERTON = { ...DEFAULT_EVERTON }; seededUsers = true; }
   if(!USERS.PROGRAMADOR){ USERS.PROGRAMADOR = { ...DEFAULT_PROG }; seededUsers = true; }
+  // Migração única: adiciona 'dados_cliente_carrinho' para usuários ADM existentes
+  try {
+    const MIGRATED = 'paizao_migrated_client_data_perm_v1';
+    if (localStorage.getItem(MIGRATED) !== '1') {
+      for (const k in USERS) {
+        const u = USERS[k];
+        if (u && u.type === 'ADM' && Array.isArray(u.permissions) && !u.permissions.includes('dados_cliente_carrinho')) {
+          u.permissions.push('dados_cliente_carrinho');
+          seededUsers = true;
+        }
+      }
+      localStorage.setItem(MIGRATED, '1');
+    }
+  } catch(_){}
+  // NOVO: Migração — adiciona 'historicocompras' para usuários ADM existentes
+  try {
+    const MIGRATED_HIST = 'paizao_migrated_historico_perm_v1';
+    if (localStorage.getItem(MIGRATED_HIST) !== '1') {
+      for (const k in USERS) {
+        const u = USERS[k];
+        if (u && u.type === 'ADM' && Array.isArray(u.permissions) && !u.permissions.includes('historicocompras')) {
+          u.permissions.push('historicocompras');
+          seededUsers = true;
+        }
+      }
+      localStorage.setItem(MIGRATED_HIST, '1');
+    }
+  } catch(_){}
   for(const k in USERS){
     const u = USERS[k];
     if(!u || typeof u !== 'object'){ delete USERS[k]; continue; }
@@ -2933,6 +3074,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addLogoutButton(user, acc);
     applyPermissions(user);
     try { if (typeof renderPesq === 'function') renderPesq(); } catch(_){}
+    if (typeof window.updateCartClientDataVisibility === 'function') {
+      try { window.updateCartClientDataVisibility(); } catch(_){}
+    }
     showToast(`Bem-vindo, ${user} · ${acc.label || acc.type || ''}`);
     if (window.auditLog) { try { window.auditLog('LOGIN', 'Entrou no sistema — ' + (acc.label || acc.type || '')); } catch(_){} }
     tryFullscreen(); armFullscreenFallback();
@@ -3459,7 +3603,7 @@ document.addEventListener('DOMContentLoaded', () => {
   usrTipo.addEventListener('change', () => {
     const t = usrTipo.value;
     const defaults = {
-      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho'],
+      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','dados_cliente_carrinho'],
       COMPRADOR: ['pesquisa', 'po', 'carrinho'], AGREGADO: ['pesquisa', 'po', 'carrinho'],
       AGREGADO2: ['pesquisa', 'po', 'carrinho'], CLIENTE: ['pesquisa', 'po', 'carrinho'],
       TRIAGEM: ['pesquisa', 'po', 'carrinho'], FINANCEIRO: ['pesquisa', 'po', 'carrinho']
@@ -3866,7 +4010,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let AUDIT = [];
   try { const saved = JSON.parse(localStorage.getItem(LS_KEY_AUD) || '[]'); if (Array.isArray(saved)) AUDIT = saved; } catch(e){ AUDIT = []; }
 
-  // Auto-limpeza: remove automaticamente lançamentos com mais de 15 dias (executada a cada carga)
   (function filtrarLancamentosAntigos(){
     try {
       const LIMITE_MS = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
@@ -3970,7 +4113,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAudit();
   window.renderAudit = renderAudit;
 
-  // Verificação periódica (a cada 1 hora) — mantém a limpeza de 15 dias em dia
   setInterval(function(){
     try {
       const LIMITE_MS = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
@@ -4006,6 +4148,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cartFilterDataInicio = $('cartFilterDataInicio'), cartFilterDataFim = $('cartFilterDataFim');
   const cartFilterBtn = $('cartFilterBtn'), cartFilterLimparBtn = $('cartFilterLimparBtn'), cartPdfBtn = $('cartPdfBtn');
   const pedidosTbody = $('pedidosTbody'), pedidosEmpty = $('pedidosEmpty'), pedidosSub = $('pedidosSub');
+  const historicoTbody = $('historicoTbody'), historicoEmpty = $('historicoEmpty'), historicoSub = $('historicoSub');
   function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function fmtMoney(n) { return 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function formatDate(date) { const d = new Date(date); return d.toLocaleDateString('pt-BR'); }
@@ -4057,11 +4200,32 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.text('Pedido Nº: ' + pedido.numero, margin, 40);
     const dt = new Date(pedido.data);
     doc.text('Data: ' + dt.toLocaleDateString('pt-BR'), pageW - margin, 40, { align: 'right' });
-    doc.setFillColor(244, 246, 249); doc.roundedRect(margin, 46, usableW, 18, 2, 2, 'F');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(22, 32, 44);
+    
+    // Dados completos do cliente
+    const cd = pedido.clienteData || {};
+    doc.setFillColor(244, 246, 249); doc.roundedRect(margin, 46, usableW, 36, 2, 2, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(22, 32, 44);
     doc.text('Cliente: ' + (pedido.userNome || '-'), margin + 5, 53);
-    doc.text('Telefone: ' + (pedido.fone || '-'), margin + 5, 60);
-    let y = 76;
+    doc.text('Fone: ' + (pedido.fone || '-'), margin + 110, 53);
+    doc.text('Endereço: ' + (cd.end || '-'), margin + 5, 59);
+    doc.text('Bairro: ' + (cd.bairro || '-'), margin + 110, 59);
+    doc.text('Cidade: ' + (cd.cidade || '-') + ' - UF: ' + (cd.uf || '-'), margin + 5, 65);
+    doc.text('CPF: ' + (cd.cpf || '-'), margin + 110, 65);
+    doc.text('RG: ' + (cd.rg || '-'), margin + 5, 71);
+    doc.text('Banco: ' + (cd.banco || '-') + ' / Ag: ' + (cd.agencia || '-') + ' / CC: ' + (cd.conta || '-'), margin + 110, 71);
+    doc.text('PIX: ' + (cd.pix || '-'), margin + 5, 77);
+
+    // NOVO: Autorização no local marcado (entre o bloco de dados e a tabela de produtos)
+    if (pedido.autorizadoPor) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(85, 107, 47);
+      doc.text('Autorizado por: ' + pedido.autorizadoPor, margin + 5, 87);
+      if (pedido.autorizadoEm) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90, 106, 125);
+        doc.text('Data/Hora: ' + new Date(pedido.autorizadoEm).toLocaleString('pt-BR'), margin + 110, 87);
+      }
+    }
+
+    let y = 95;
     const colX = [margin + 2, margin + 32, margin + 62, margin + 92, margin + 110, margin + 150];
     const rowH = 7;
     doc.setFillColor(15, 35, 56); doc.rect(margin, y, usableW, 8, 'F');
@@ -4089,7 +4253,13 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(21, 128, 61);
     doc.text('TOTAL GERAL:', pageW - margin - 76, y + 9);
     doc.setFontSize(13); doc.text(fmt(pedido.total), pageW - margin - 4, y + 9, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(147, 162, 179);
+    
+    // Assinatura no rodapé (sempre)
+    doc.setDrawColor(200, 210, 220); doc.line(margin, pageH - 40, pageW - margin, pageH - 40);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 106, 125);
+    doc.text('Assinatura: ________________________________', margin, pageH - 30);
+
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(147, 162, 179);
     doc.text('Everton Metais · Sistema de Consulta Técnica · Documento gerado automaticamente', pageW / 2, pageH - 10, { align: 'center' });
     return doc.output('blob');
   }
@@ -4103,6 +4273,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     try {
       if (window.auditLog) { try { window.auditLog('PEDIDO_PDF_ABERTO', 'Abriu PDF do pedido ' + numero); } catch(_){} }
+      
+      if (!pedido.clienteData) {
+        try {
+          const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
+          const c = clientes.find(x => x.nome.toLowerCase() === (pedido.userNome || '').toLowerCase());
+          if (c) pedido.clienteData = c;
+        } catch(e){}
+      }
+
       let blob = null;
       if (pedido.pdf) { if (pedido.pdf.startsWith('data:')) { blob = dataUriToBlob(pedido.pdf); } else { try { blob = base64ToBlob(pedido.pdf, 'application/pdf'); } catch(e) { blob = null; } } }
       if (!blob) { try { blob = gerarPDFBlobFromPedido(pedido); } catch(e) { blob = null; } }
@@ -4117,25 +4296,77 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { alert('Erro ao abrir o PDF: ' + e.message); }
   }
   window.openPedidoPDF = openPedidoPDF;
+  
+  // Solicitar autorização do pedido
+  function solicitarAutorizacaoPedido(numero) {
+    const pedido = pedidosSalvos.find(p => p.numero === numero);
+    if (!pedido) return;
+    if (pedido.autorizado) { alert('Este pedido já está autorizado.'); return; }
+    const pwd = prompt('Digite a senha do usuário autorizador (ADM, TRIAGEM ou FINANCEIRO):');
+    if (!pwd) return;
+    const USERS = window.USERS || {};
+    let autorizador = null;
+    for (const k in USERS) {
+      const u = USERS[k];
+      if (!u) continue;
+      const tipo = String(u.type || '').toUpperCase();
+      if (['ADM', 'TRIAGEM', 'FINANCEIRO'].includes(tipo) && u.pass === pwd) {
+        autorizador = k;
+        break;
+      }
+    }
+    if (!autorizador) {
+      alert('Senha inválida ou usuário sem permissão para autorizar.');
+      if (window.auditLog) { try { window.auditLog('PEDIDO_AUTORIZACAO_NEGADA', 'Tentativa de autorizar pedido ' + numero + ' sem credencial válida'); } catch(_){} }
+      return;
+    }
+    
+    pedido.autorizado = true;
+    pedido.autorizadoPor = autorizador;
+    pedido.autorizadoEm = new Date().toISOString();
+    
+    if (!pedido.clienteData) {
+      try {
+        const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
+        const c = clientes.find(x => x.nome.toLowerCase() === (pedido.userNome || '').toLowerCase());
+        if (c) pedido.clienteData = c;
+      } catch(e){}
+    }
+    
+    savePedidos();
+    if (window.auditLog) { try { window.auditLog('PEDIDO_AUTORIZADO', 'Pedido ' + numero + ' autorizado por ' + autorizador); } catch(_){} }
+    renderPedidos();
+    renderHistorico();   // NOVO: atualiza a aba Histórico Compras
+    openPedidoPDF(numero); // Abre o PDF logo após autorizar
+  }
+
+  // NOVO: Renderiza Pedidos Salvos (apenas os NÃO autorizados)
   function renderPedidos() {
     if (!pedidosTbody) return;
-    if (pedidosSub) { const n = pedidosSalvos.length; pedidosSub.textContent = n + ' pedido' + (n === 1 ? '' : 's') + ' salvo' + (n === 1 ? '' : 's'); }
-    if (pedidosSalvos.length === 0) { pedidosTbody.innerHTML = ''; if (pedidosEmpty) pedidosEmpty.classList.remove('hidden'); return; }
+    const pendentes = pedidosSalvos.filter(p => !p.autorizado);
+    if (pedidosSub) { const n = pendentes.length; pedidosSub.textContent = n + ' pedido' + (n === 1 ? '' : 's') + ' pendente' + (n === 1 ? '' : 's') + ' de autorização'; }
+    if (pendentes.length === 0) { pedidosTbody.innerHTML = ''; if (pedidosEmpty) pedidosEmpty.classList.remove('hidden'); return; }
     if (pedidosEmpty) pedidosEmpty.classList.add('hidden');
-    pedidosTbody.innerHTML = pedidosSalvos.map(p => {
+    pedidosTbody.innerHTML = pendentes.map(p => {
       const d = new Date(p.data);
       const dataStr = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      // NOVO: Botão AUTORIZADO no mesmo tamanho do PDF e na cor verde azeitona
+      const authBtn = `<button class="row-edit auth-olive" data-pedido-auth="${escHtml(p.numero)}" title="Autorizar pedido" aria-label="Autorizar">✓</button>`;
+      
       return `<tr>
         <td><span class="code-chip primary">${escHtml(p.numero)}</span></td>
         <td>${escHtml(dataStr)}</td><td>${escHtml(p.userNome || '')}</td><td>${escHtml(p.fone || '')}</td>
         <td style="text-align:right">${(p.itens||[]).length}</td>
         <td style="text-align:right;font-weight:700;color:#15803d">${fmtMoney(p.total||0)}</td>
-        <td style="text-align:center">
+        <td class="pedido-actions">
+          ${authBtn}
           <button class="row-edit" data-pedido-pdf="${escHtml(p.numero)}" title="Abrir PDF" aria-label="Abrir PDF">📄</button>
           <button class="row-edit" data-pedido-del="${escHtml(p.numero)}" title="Excluir pedido" aria-label="Excluir" style="background:#fee2e2;color:#b91c1c;border-color:#fecaca">🗑</button>
         </td>
       </tr>`;
     }).join('');
+    
+    pedidosTbody.querySelectorAll('[data-pedido-auth]').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); solicitarAutorizacaoPedido(btn.dataset.pedidoAuth); }); });
     pedidosTbody.querySelectorAll('[data-pedido-pdf]').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); openPedidoPDF(btn.dataset.pedidoPdf); }); });
     pedidosTbody.querySelectorAll('[data-pedido-del]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -4148,6 +4379,55 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // NOVO: Renderiza Histórico Compras (apenas os autorizados)
+  function renderHistorico() {
+    if (!historicoTbody) return;
+    const autorizados = pedidosSalvos.filter(p => p.autorizado);
+    if (historicoSub) {
+      const n = autorizados.length;
+      historicoSub.textContent = n + ' pedido' + (n === 1 ? '' : 's') + ' autorizado' + (n === 1 ? '' : 's');
+    }
+    if (autorizados.length === 0) {
+      historicoTbody.innerHTML = '';
+      if (historicoEmpty) historicoEmpty.classList.remove('hidden');
+      return;
+    }
+    if (historicoEmpty) historicoEmpty.classList.add('hidden');
+    historicoTbody.innerHTML = autorizados.map(p => {
+      const d = new Date(p.data);
+      const dataStr = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+      let dataAutStr = '—';
+      if (p.autorizadoEm) {
+        try { dataAutStr = new Date(p.autorizadoEm).toLocaleString('pt-BR'); } catch(e){}
+      }
+      return `<tr>
+        <td><span class="code-chip primary">${escHtml(p.numero)}</span></td>
+        <td>${escHtml(dataStr)}</td><td>${escHtml(p.userNome || '')}</td><td>${escHtml(p.fone || '')}</td>
+        <td style="text-align:right">${(p.itens||[]).length}</td>
+        <td style="text-align:right;font-weight:700;color:#15803d">${fmtMoney(p.total||0)}</td>
+        <td class="hist-autorizado">${escHtml(p.autorizadoPor || '—')}</td>
+        <td class="hist-data-aut">${escHtml(dataAutStr)}</td>
+        <td class="pedido-actions">
+          <button class="row-edit" data-historico-pdf="${escHtml(p.numero)}" title="Abrir PDF" aria-label="Abrir PDF">📄</button>
+          <button class="row-edit" data-historico-del="${escHtml(p.numero)}" title="Excluir do histórico" aria-label="Excluir" style="background:#fee2e2;color:#b91c1c;border-color:#fecaca">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    historicoTbody.querySelectorAll('[data-historico-pdf]').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); openPedidoPDF(btn.dataset.historicoPdf); }); });
+    historicoTbody.querySelectorAll('[data-historico-del]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const numero = btn.dataset.historicoDel;
+        if (!confirm('Excluir o pedido ' + numero + ' do histórico?\n\nO PDF correspondente também será removido.')) return;
+        if (!podeVerPedidoPDF()) { alert('Você não tem permissão para excluir pedidos.'); return; }
+        const idx = pedidosSalvos.findIndex(p => p.numero === numero);
+        if (idx >= 0) { pedidosSalvos.splice(idx, 1); savePedidos(); if (window.auditLog) { try { window.auditLog('PEDIDO_HISTORICO_EXCLUIDO', 'Pedido ' + numero); } catch(_){} } renderHistorico(); renderPedidos(); }
+      });
+    });
+  }
+  window.renderHistorico = renderHistorico;
+
   function getUserInfo() {
     const userName = window.currentUserNome || window.currentUser;
     if (!userName) return { nome: 'Usuário não logado', fone: '' };
@@ -4155,12 +4435,73 @@ document.addEventListener('DOMContentLoaded', () => {
       const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
       if (Array.isArray(clientes)) {
         const cliente = clientes.find(c => c.nome && c.nome.toLowerCase() === userName.toLowerCase());
-        if (cliente) { return { nome: cliente.nome, fone: cliente.fone || '' }; }
+        if (cliente) {
+          return {
+            nome: cliente.nome,
+            fone: cliente.fone || '',
+            end: cliente.end || '',
+            bairro: cliente.bairro || '',
+            cidade: cliente.cidade || '',
+            uf: cliente.uf || '',
+            cpf: cliente.cpf || '',
+            rg: cliente.rg || '',
+            banco: cliente.banco || '',
+            agencia: cliente.agencia || '',
+            conta: cliente.conta || '',
+            pix: cliente.pix || ''
+          };
+        }
       }
     } catch(e) { }
     return { nome: userName, fone: '' };
   }
   function updateCartUserInfo() { }
+  function podeVerDadosClienteCarrinho() {
+    if (!window.currentUser) return false;
+    if (window.currentUser === 'PROGRAMADOR') return true;
+    const u = window.USERS && window.USERS[window.currentUser];
+    if (!u || !Array.isArray(u.permissions)) return false;
+    return u.permissions.includes('all') || u.permissions.includes('dados_cliente_carrinho');
+  }
+  function renderCartClientData() {
+    const panel = document.getElementById('cartClientDataPanel');
+    if (!panel) return;
+    if (!podeVerDadosClienteCarrinho()) {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+    const userName = window.currentUserNome || window.currentUser;
+    let cliente = null;
+    try {
+      const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
+      if (Array.isArray(clientes)) {
+        cliente = clientes.find(c => c.nome && c.nome.toLowerCase() === userName.toLowerCase());
+      }
+    } catch(e){}
+    const fill = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    fill('cdNome', cliente ? cliente.nome : userName);
+    fill('cdFone', cliente ? cliente.fone : '');
+    fill('cdEnd', cliente ? cliente.end : '');
+    fill('cdBairro', cliente ? cliente.bairro : '');
+    fill('cdCidade', cliente ? cliente.cidade : '');
+    fill('cdUf', cliente ? cliente.uf : '');
+    fill('cdCpf', cliente ? cliente.cpf : '');
+    fill('cdRg', cliente ? cliente.rg : '');
+    fill('cdBanco', cliente ? cliente.banco : '');
+    fill('cdAgencia', cliente ? cliente.agencia : '');
+    fill('cdConta', cliente ? cliente.conta : '');
+    fill('cdPix', cliente ? cliente.pix : '');
+    const sub = document.getElementById('cartClientDataSub');
+    if (sub) {
+      const disc = getDiscountForUser();
+      const discLabel = disc > 0 ? ' · Desconto: ' + Math.round(disc*100) + '%' : ' · Sem desconto';
+      const tipo = window.currentUserType || '';
+      sub.textContent = 'Tipo: ' + tipo + discLabel + ' · Dados cadastrados';
+    }
+  }
+  window.updateCartClientDataVisibility = renderCartClientData;
+
   window.addToCart = function(item) {
     if (!window.currentUser) { alert('Você precisa estar logado para adicionar itens ao carrinho.'); return; }
     const userInfo = getUserInfo();
@@ -4173,11 +4514,32 @@ document.addEventListener('DOMContentLoaded', () => {
       cartItems[existingIndex].total = cartItems[existingIndex].quantidade * cartItems[existingIndex].unitario;
     } else {
       const codigos = (item.cod || []).slice(0, 3);
-      cartItems.push({ ref: item.ref, nome: userInfo.nome, fone: userInfo.fone, data: new Date().toISOString().split('T')[0], codigos: codigos, quantidade: 1, unitario: unitarioDesc, total: unitarioDesc });
+      cartItems.push({
+        ref: item.ref,
+        nome: userInfo.nome,
+        fone: userInfo.fone,
+        end: userInfo.end || '',
+        bairro: userInfo.bairro || '',
+        cidade: userInfo.cidade || '',
+        uf: userInfo.uf || '',
+        cpf: userInfo.cpf || '',
+        rg: userInfo.rg || '',
+        banco: userInfo.banco || '',
+        agencia: userInfo.agencia || '',
+        conta: userInfo.conta || '',
+        pix: userInfo.pix || '',
+        data: new Date().toISOString().split('T')[0],
+        codigos: codigos,
+        quantidade: 1,
+        unitario: unitarioDesc,
+        total: unitarioDesc,
+        autorizado: false
+      });
     }
     saveCart(); renderCart();
     const cartTab = document.querySelector('.tab[data-tab="carrinho"]'); if (cartTab) { cartTab.click(); }
   };
+  
   function renderCart() {
     let filteredItems = [...cartItems];
     const filterNome = cartFilterNome.value.trim().toLowerCase();
@@ -4251,7 +4613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let numeroPedido; try { numeroPedido = gerarNumeroPedido(); } catch (e) { alert('Erro ao gerar número do pedido: ' + e.message); return; }
     const pedido = {
       numero: numeroPedido, data: new Date().toISOString(), user: window.currentUser || '',
-      userNome: userInfo.nome, fone: userInfo.fone,
+      userNome: userInfo.nome, fone: userInfo.fone, clienteData: userInfo,
       itens: filteredItems.map(i => ({ codigos: [...i.codigos], quantidade: i.quantidade, unitario: i.unitario, total: i.total })),
       total: totalGeral
     };
@@ -4274,7 +4636,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCart();
   });
   cartPdfBtn.addEventListener('click', gerarPDF);
-  renderCart(); renderPedidos();
+  renderCart(); renderPedidos(); renderHistorico(); renderCartClientData();
   window.updateCartUserInfo = updateCartUserInfo;
 })();
 </script>
@@ -4371,7 +4733,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reg.addEventListener('updatefound', function(){
           var nw = reg.installing; if (!nw) return;
           nw.addEventListener('statechange', function(){
-            if (nw.state === 'installed' && navigator.serviceWorker.controller){ /* nova versão pronta */ }
+            if (nw.state === 'installed' && navigator.serviceWorker.controller){ }
           });
         });
       })
@@ -4380,11 +4742,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
-<!-- ============================================================
-     CARREGADOR — COLEÇÃO "produtos_visivel" (FIRESTORE)
-     Lê os documentos da coleção e mescla no DATA sem sobrescrever
-     dados locais existentes. Só carrega se DATA estiver vazio.
-     ============================================================ -->
 <script>
 (function produtosVisivelLoader(){
   'use strict';
@@ -4411,13 +4768,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function normalizeDoc(doc){
     var d = doc.data() || {};
     var raw = d;
-    // Alguns documentos podem vir no formato { value: "<json>", updatedAt: ... }
     if (typeof d.value === 'string'){
       try { raw = JSON.parse(d.value); } catch(e){ raw = d; }
     }
     if (!raw || typeof raw !== 'object') return null;
 
-    // Referência interna
     var ref = '';
     if (raw.ref !== undefined && raw.ref !== null && String(raw.ref).trim() !== ''){
       ref = String(raw.ref).trim();
@@ -4428,7 +4783,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ref = m ? String(parseInt(m[1], 10)) : doc.id;
     }
 
-    // Códigos
     var cod = [];
     if (Array.isArray(raw.cod)){
       cod = raw.cod.map(String).map(function(s){ return s.trim(); }).filter(Boolean);
@@ -4467,7 +4821,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function load(){
-    // Só carrega do Firestore se DATA estiver vazio (protege dados locais)
     if (Array.isArray(DATA) && DATA.length > 0){
       console.log('[produtos_visivel] DATA já possui ' + DATA.length + ' item(ns) — leitura do Firestore ignorada para economizar cotas.');
       return;
@@ -4499,14 +4852,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Ordena por referência numérica quando possível
     items.sort(function(a, b){
       var na = parseInt(a.ref, 10), nb = parseInt(b.ref, 10);
       if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
       return String(a.ref).localeCompare(String(b.ref), 'pt-BR', { numeric: true });
     });
 
-    // Substitui o conteúdo do array DATA (sem trocar a referência)
     try {
       DATA.length = 0;
       for (var i = 0; i < items.length; i++) DATA.push(items[i]);
@@ -4515,7 +4866,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Persiste no localStorage — o FirebaseSync espelha em appData/paizao_catalisadores
     try {
       var mirror = DATA.map(function(it){
         var c = Object.assign({}, it);
@@ -4523,9 +4873,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return c;
       });
       localStorage.setItem('paizao_catalisadores', JSON.stringify(mirror));
-    } catch(e){ /* quota cheia — ignora */ }
+    } catch(e){ }
 
-    // Re-render
     try { if (typeof refreshMarcaOptions === 'function') refreshMarcaOptions(); } catch(e){}
     var badge = document.getElementById('tabCount');
     if (badge) badge.textContent = DATA.length;
