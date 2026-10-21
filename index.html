@@ -78,6 +78,7 @@
       'paizao_usuarios',
       'paizao_clientes',
       'paizao_compra_venda_po',
+      'paizao_cv_po_historico',
       'paizao_auditoria',
       'paizao_carrinho',
       'paizao_pedidos',
@@ -823,6 +824,10 @@
     #view-compravendapo .cv-dashboards{grid-template-columns:1fr}
     #view-compravendapo .cv-dash .val{font-size:22px}
   }
+  /* NOVO: CPF field destaque */
+  #view-compravendapo .cv-cpf-field{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  #view-compravendapo .cv-cpf-field label{color:#15803d;font-weight:700;font-size:13px}
+  #view-compravendapo .cv-cpf-field input{background:#fff;font-weight:700;font-size:15px;letter-spacing:.5px}
 
   /* ==== botão Autorizado (verde azeitona) e dados do cliente no carrinho ==== */
   .cart-auth-btn{
@@ -1238,17 +1243,35 @@
       <span class="sub" id="cvFormSub">Cadastre uma compra ou venda de pó</span>
     </div>
     <div class="form-body">
+      <!-- CPF PRIMEIRO -->
+      <div class="cv-cpf-field">
+        <label for="cvCpf">🔍 CPF (digite para autocompletar)</label>
+        <input type="text" id="cvCpf" placeholder="000.000.000-00" autocomplete="off">
+        <div class="hint" id="cvCpfHint">Ao digitar o CPF de um cliente cadastrado, os demais campos serão preenchidos automaticamente e a regra de desconto será aplicada.</div>
+      </div>
+
       <div class="grid-cv-top">
-        <div class="field">
-          <label for="cvNome">Nome</label>
-          <input type="text" id="cvNome" placeholder="Nome do cliente / fornecedor" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="cvFone">Fone</label>
-          <input type="text" id="cvFone" placeholder="Ex.: (11) 99999-9999" autocomplete="off">
-        </div>
+        <div class="field"><label for="cvNome">Nome completo</label><input type="text" id="cvNome" placeholder="Nome do cliente / fornecedor" autocomplete="off"></div>
+        <div class="field"><label for="cvFone">Fone</label><input type="text" id="cvFone" placeholder="Ex.: (11) 99999-9999" autocomplete="off"></div>
       </div>
       <div class="grid-cv-top">
+        <div class="field"><label for="cvEnd">Endereço</label><input type="text" id="cvEnd" autocomplete="off"></div>
+        <div class="field"><label for="cvBairro">Bairro</label><input type="text" id="cvBairro" autocomplete="off"></div>
+      </div>
+      <div class="grid-cv-top">
+        <div class="field"><label for="cvCidade">Cidade</label><input type="text" id="cvCidade" autocomplete="off"></div>
+        <div class="field"><label for="cvUf">UF</label><input type="text" id="cvUf" maxlength="2" style="text-transform:uppercase" autocomplete="off"></div>
+      </div>
+      <div class="grid-cv-top">
+        <div class="field"><label for="cvRg">RG</label><input type="text" id="cvRg" autocomplete="off"></div>
+        <div class="field"><label for="cvBanco">Banco</label><input type="text" id="cvBanco" autocomplete="off"></div>
+      </div>
+      <div class="grid-cv-top">
+        <div class="field"><label for="cvAgencia">Agência</label><input type="text" id="cvAgencia" autocomplete="off"></div>
+        <div class="field"><label for="cvConta">Conta</label><input type="text" id="cvConta" autocomplete="off"></div>
+      </div>
+      <div class="grid-cv-top">
+        <div class="field"><label for="cvPix">PIX</label><input type="text" id="cvPix" autocomplete="off"></div>
         <div class="field">
           <label for="cvTipo">Tipo de operação</label>
           <select id="cvTipo">
@@ -1256,9 +1279,15 @@
             <option value="VENDA">VENDA (R$ calculado automaticamente)</option>
           </select>
         </div>
+      </div>
+      <div class="grid-cv-top">
         <div class="field">
           <label for="cvData">Data</label>
           <input type="date" id="cvData">
+        </div>
+        <div class="field">
+          <label>Regra de desconto aplicada</label>
+          <div id="cvDescInfo" style="height:42px;line-height:42px;padding:0 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;color:#15803d;font-weight:700;font-size:13px;">—</div>
         </div>
       </div>
       <div class="grid-cv">
@@ -1310,19 +1339,20 @@
       </div>
     </div>
     <div class="table-scroll">
-      <table style="min-width:1000px">
+      <table style="min-width:1200px">
         <thead>
           <tr>
             <th>Nome</th>
-            <th style="width:140px">Fone</th>
+            <th style="width:130px">CPF</th>
+            <th style="width:130px">Fone</th>
             <th style="width:110px">Tipo</th>
-            <th style="width:120px">Data</th>
+            <th style="width:110px">Data</th>
             <th style="width:110px;text-align:right">Peso (kg)</th>
             <th style="width:100px;text-align:right">Pd</th>
             <th style="width:100px;text-align:right">Pt</th>
             <th style="width:100px;text-align:right">Rh</th>
             <th style="width:140px;text-align:right">R$</th>
-            <th style="width:180px;text-align:center">Ações</th>
+            <th style="width:190px;text-align:center">Ações</th>
           </tr>
         </thead>
         <tbody id="cvTbody"></tbody>
@@ -1335,8 +1365,8 @@
     </div>
     <div class="footnote">
       <b>COMPRA:</b> todos os campos são editáveis (R$ digitado manualmente).<br>
-      <b>VENDA:</b> informe peso e teores (Pd/Pt/Rh) — o R$ é calculado automaticamente pela mesma regra da aba <b>Pó</b>.
-      Cada registro salvo possui um botão <b>📄 PDF</b> na coluna "Ações".
+      <b>VENDA:</b> informe peso e teores (Pd/Pt/Rh) — o R$ é calculado automaticamente pela mesma regra da aba <b>Pó</b>, com o <b>desconto do tipo do cliente</b> (AGREGADO 10%, AGREGADO2 30%, CLIENTE 20%).<br>
+      Clique no botão <b>✓</b> (verde azeitona) para <b>autorizar</b> o lançamento. Será solicitada a senha de um usuário ADM, TRIAGEM ou FINANCEIRO, e o registro será <b>transferido</b> para a aba <b>Histórico Compras</b>.
     </div>
   </section>
 </main>
@@ -1706,7 +1736,7 @@
   </section>
 </main>
 
-<!-- =================== NOVO: HISTÓRICO COMPRAS =================== -->
+<!-- =================== HISTÓRICO COMPRAS =================== -->
 <main class="wrap hidden" id="view-historicocompras">
   <section class="panel">
     <div class="panel-head">
@@ -1737,6 +1767,44 @@
     </div>
     <div class="footnote">
       Pedidos <b>autorizados</b> são transferidos automaticamente para esta aba. O botão <b>📄</b> abre o PDF com o campo <b>"Autorizado por"</b> preenchido.
+    </div>
+  </section>
+
+  <!-- NOVO: PAINEL COMPRA/VENDA DE PÓ AUTORIZADAS -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Compra/Venda de Pó Autorizadas</h2>
+      <span class="sub" id="historicoCvPoSub">0 registros</span>
+    </div>
+    <div class="table-scroll">
+      <table style="min-width:1300px">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th style="width:130px">CPF</th>
+            <th style="width:130px">Fone</th>
+            <th style="width:110px">Tipo</th>
+            <th style="width:110px">Data</th>
+            <th style="width:110px;text-align:right">Peso (kg)</th>
+            <th style="width:100px;text-align:right">Pd</th>
+            <th style="width:100px;text-align:right">Pt</th>
+            <th style="width:100px;text-align:right">Rh</th>
+            <th style="width:140px;text-align:right">R$</th>
+            <th style="width:150px;text-align:center">Autorizado por</th>
+            <th style="width:160px;text-align:center">Data Autorização</th>
+            <th style="width:110px;text-align:center">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="historicoCvPoTbody"></tbody>
+      </table>
+    </div>
+    <div class="empty hidden" id="historicoCvPoEmpty">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h6v-9z"/><path d="M15 7H9v13h6V7z"/><path d="M21 3h-6v17h6V3z"/></svg>
+      <h3>Nenhum lançamento de pó autorizado ainda</h3>
+      <p>Os lançamentos de Compra/Venda de Pó autorizados aparecerão aqui.</p>
+    </div>
+    <div class="footnote">
+      Lançamentos <b>autorizados</b> na aba <b>Compra/Venda Pó</b> são transferidos automaticamente para esta aba. O botão <b>📄</b> abre o PDF com o campo <b>"Autorizado por"</b> preenchido.
     </div>
   </section>
 </main>
@@ -2472,13 +2540,12 @@ document.querySelectorAll('.tab').forEach(btn => {
     if(vaud) vaud.classList.toggle('hidden', t !== 'auditoria');
     const vcart = document.getElementById('view-carrinho');
     if(vcart) vcart.classList.toggle('hidden', t !== 'carrinho');
-    // NOVO: alterna a view do Histórico Compras
     const vhist = document.getElementById('view-historicocompras');
     if(vhist) vhist.classList.toggle('hidden', t !== 'historicocompras');
-    if (t === 'historicocompras' && typeof window.renderHistorico === 'function') {
-      try { window.renderHistorico(); } catch(_){}
+    if (t === 'historicocompras') {
+      if (typeof window.renderHistorico === 'function') { try { window.renderHistorico(); } catch(_){} }
+      if (typeof window.renderHistoricoCvPo === 'function') { try { window.renderHistoricoCvPo(); } catch(_){} }
     }
-    // NOVO: atualiza visibilidade do painel "Dados do Cliente" ao abrir carrinho
     if (t === 'carrinho' && typeof window.updateCartClientDataVisibility === 'function') {
       try { window.updateCartClientDataVisibility(); } catch(_){}
     }
@@ -2952,7 +3019,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(saved && typeof saved === 'object' && !Array.isArray(saved)) USERS = saved;
   }catch(e){ USERS = {}; }
   let seededUsers = false;
-  // Migração: SERGIO (senha antiga 080888) → EVERTON (nova senha 986533990)
   if (USERS.SERGIO && USERS.SERGIO.pass === '080888') {
     const sergioData = USERS.SERGIO;
     delete USERS.SERGIO;
@@ -2963,7 +3029,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if(!USERS.EVERTON){ USERS.EVERTON = { ...DEFAULT_EVERTON }; seededUsers = true; }
   if(!USERS.PROGRAMADOR){ USERS.PROGRAMADOR = { ...DEFAULT_PROG }; seededUsers = true; }
-  // Migração única: adiciona 'dados_cliente_carrinho' para usuários ADM existentes
   try {
     const MIGRATED = 'paizao_migrated_client_data_perm_v1';
     if (localStorage.getItem(MIGRATED) !== '1') {
@@ -2977,7 +3042,6 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem(MIGRATED, '1');
     }
   } catch(_){}
-  // NOVO: Migração — adiciona 'historicocompras' para usuários ADM existentes
   try {
     const MIGRATED_HIST = 'paizao_migrated_historico_perm_v1';
     if (localStorage.getItem(MIGRATED_HIST) !== '1') {
@@ -3577,7 +3641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const roleMap = { ADM: 'admin', COMPRADOR: 'comprador', AGREGADO: 'agregado', AGREGADO2: 'agregado2', CLIENTE: 'cliente', TRIAGEM: 'triagem', FINANCEIRO: 'financeiro' };
     const existing = USERS[finalUser] || {};
     let selfieFinal = selfieData || ''; let selfiePath = existing.selfieStoragePath || ''; let precisaUpload = false;
-    if (existing.selfie === selfieFinal) { /* nada */ }
+    if (existing.selfie === selfieFinal) { }
     else if (selfieFinal && selfieFinal.indexOf('data:') === 0 && window.__fbUploadImage) { precisaUpload = true; }
     else if (!selfieFinal) { selfiePath = ''; }
     USERS[finalUser] = { pass, role: roleMap[tipo] || 'comprador', type: tipo, label: labelMap[tipo] || tipo, permissions: perms, selfie: selfieFinal || '', selfieStoragePath: selfiePath, nome };
@@ -3824,31 +3888,144 @@ document.addEventListener('DOMContentLoaded', () => {
 (function compraVendaPoSystem(){
   'use strict';
   const LS_KEY_CV = 'paizao_compra_venda_po';
+  const LS_KEY_CV_HIST = 'paizao_cv_po_historico';
   let registros = [];
   try { const saved = JSON.parse(localStorage.getItem(LS_KEY_CV) || '[]'); if (Array.isArray(saved)) registros = saved; } catch(e){ registros = []; }
+  let historicoCvPo = [];
+  try { const savedH = JSON.parse(localStorage.getItem(LS_KEY_CV_HIST) || '[]'); if (Array.isArray(savedH)) historicoCvPo = savedH; } catch(e){ historicoCvPo = []; }
   let editIndex = -1;
   const $ = id => document.getElementById(id);
+  const cvCpf = $('cvCpf');
   const cvNome = $('cvNome'), cvFone = $('cvFone'), cvTipo = $('cvTipo'), cvData = $('cvData');
+  const cvEnd = $('cvEnd'), cvBairro = $('cvBairro'), cvCidade = $('cvCidade'), cvUf = $('cvUf');
+  const cvRg = $('cvRg'), cvBanco = $('cvBanco'), cvAgencia = $('cvAgencia'), cvConta = $('cvConta'), cvPix = $('cvPix');
   const cvPeso = $('cvPeso'), cvPd = $('cvPd'), cvPt = $('cvPt'), cvRh = $('cvRh'), cvRs = $('cvRs');
   const cvSalvarBtn = $('cvSalvarBtn'), cvLimparBtn = $('cvLimparBtn'), cvCancelarBtn = $('cvCancelarBtn');
   const cvFormSub = $('cvFormSub'), cvTbody = $('cvTbody'), cvCount = $('cvCount'), cvEmpty = $('cvEmpty');
+  const cvDescInfo = $('cvDescInfo');
+  const cvCpfHint = $('cvCpfHint');
+
   function saveRegistros(){ try { localStorage.setItem(LS_KEY_CV, JSON.stringify(registros)); } catch(e){} }
+  function saveHistorico(){ try { localStorage.setItem(LS_KEY_CV_HIST, JSON.stringify(historicoCvPo)); } catch(e){} }
   function escHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function fmtMoneyLocal(n){ return 'R$ ' + Number(n || 0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
   function fmtDateBR(iso){ if(!iso) return '—'; const parts = String(iso).split('-'); if(parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0]; return iso; }
   function todayISO(){ const d = new Date(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return d.getFullYear() + '-' + m + '-' + day; }
-  function calcVendaRs(){ const peso = parseFloat(cvPeso.value) || 0; const pd = parseFloat(cvPd.value) || 0; const pt = parseFloat(cvPt.value) || 0; const rh = parseFloat(cvRh.value) || 0; if (peso <= 0) return 0; const rskg = calcRskgFromTeores(pd, pt, rh); return rskg * peso; }
+
+  function buscarClientePorCpf(cpf){
+    const cpfNorm = String(cpf || '').replace(/\D/g, '');
+    if (!cpfNorm) return null;
+    try {
+      const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
+      return clientes.find(c => String(c.cpf || '').replace(/\D/g, '') === cpfNorm) || null;
+    } catch(e){ return null; }
+  }
+
+  function getDiscountForCpf(cpf){
+    const cpfNorm = String(cpf || '').replace(/\D/g, '');
+    if (!cpfNorm) return 0;
+    try {
+      const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
+      const cliente = clientes.find(c => String(c.cpf || '').replace(/\D/g, '') === cpfNorm);
+      if (!cliente) return 0;
+      const USERS = window.USERS || {};
+      const nomeLower = String(cliente.nome || '').toLowerCase().trim();
+      if (!nomeLower) return 0;
+      for (const k in USERS) {
+        const u = USERS[k];
+        if (u && u.nome && String(u.nome).toLowerCase().trim() === nomeLower) {
+          const t = String(u.type || '').toUpperCase();
+          if (t === 'AGREGADO')  return 0.10;
+          if (t === 'AGREGADO2') return 0.30;
+          if (t === 'CLIENTE')   return 0.20;
+          return 0;
+        }
+      }
+    } catch(e){}
+    return 0;
+  }
+
+  function updateDescInfo(){
+    const disc = getDiscountForCpf(cvCpf.value);
+    const cliente = buscarClientePorCpf(cvCpf.value);
+    if (cliente) {
+      const t = (function(){
+        const USERS = window.USERS || {};
+        const nomeLower = String(cliente.nome || '').toLowerCase().trim();
+        for (const k in USERS){
+          const u = USERS[k];
+          if (u && u.nome && String(u.nome).toLowerCase().trim() === nomeLower) return u.type || '—';
+        }
+        return '—';
+      })();
+      if (disc > 0) cvDescInfo.textContent = Math.round(disc*100) + '% (' + t + ')';
+      else cvDescInfo.textContent = 'Sem desconto (' + t + ')';
+      cvCpfHint.textContent = '✅ Cliente encontrado: ' + (cliente.nome || '—') + ' — campos preenchidos automaticamente.';
+      cvCpfHint.style.color = '#15803d';
+    } else if (cvCpf.value.trim()) {
+      cvDescInfo.textContent = 'CPF não cadastrado';
+      cvCpfHint.textContent = '⚠️ CPF não encontrado no cadastro. Preencha os campos manualmente.';
+      cvCpfHint.style.color = '#b45309';
+    } else {
+      cvDescInfo.textContent = '—';
+      cvCpfHint.textContent = 'Ao digitar o CPF de um cliente cadastrado, os demais campos serão preenchidos automaticamente e a regra de desconto será aplicada.';
+      cvCpfHint.style.color = '#93a2b3';
+    }
+    if (cvTipo.value === 'VENDA') updateRsState();
+  }
+
+  function preencherDadosPorCpf(){
+    const cliente = buscarClientePorCpf(cvCpf.value);
+    if (cliente) {
+      cvNome.value = cliente.nome || '';
+      cvFone.value = cliente.fone || '';
+      cvEnd.value = cliente.end || '';
+      cvBairro.value = cliente.bairro || '';
+      cvCidade.value = cliente.cidade || '';
+      cvUf.value = cliente.uf || '';
+      cvRg.value = cliente.rg || '';
+      cvBanco.value = cliente.banco || '';
+      cvAgencia.value = cliente.agencia || '';
+      cvConta.value = cliente.conta || '';
+      cvPix.value = cliente.pix || '';
+    }
+    updateDescInfo();
+  }
+
+  function calcVendaRsBase(){
+    const peso = parseFloat(cvPeso.value) || 0;
+    const pd = parseFloat(cvPd.value) || 0;
+    const pt = parseFloat(cvPt.value) || 0;
+    const rh = parseFloat(cvRh.value) || 0;
+    if (peso <= 0) return 0;
+    const rskg = calcRskgFromTeores(pd, pt, rh);
+    return rskg * peso;
+  }
+  function calcVendaRs(){
+    const base = calcVendaRsBase();
+    const disc = getDiscountForCpf(cvCpf.value);
+    return base * (1 - disc);
+  }
   function updateRsState(){
     if (cvTipo.value === 'VENDA'){ cvRs.readOnly = true; cvRs.classList.add('po-readonly'); const val = calcVendaRs(); cvRs.value = val.toFixed(2); }
     else { cvRs.readOnly = false; cvRs.classList.remove('po-readonly'); }
   }
+
+  cvCpf.addEventListener('blur', preencherDadosPorCpf);
+  cvCpf.addEventListener('change', preencherDadosPorCpf);
   [cvPeso, cvPd, cvPt, cvRh].forEach(el => { if (el) el.addEventListener('input', () => { if (cvTipo.value === 'VENDA') updateRsState(); }); });
-  cvTipo.addEventListener('change', updateRsState);
+  cvTipo.addEventListener('change', () => { updateRsState(); updateDescInfo(); });
+
   function clearFields(){
+    cvCpf.value = '';
     cvNome.value = ''; cvFone.value = ''; cvTipo.value = 'COMPRA'; cvData.value = todayISO();
+    cvEnd.value = ''; cvBairro.value = ''; cvCidade.value = ''; cvUf.value = '';
+    cvRg.value = ''; cvBanco.value = ''; cvAgencia.value = ''; cvConta.value = ''; cvPix.value = '';
     cvPeso.value = '0'; cvPd.value = '0'; cvPt.value = '0'; cvRh.value = '0'; cvRs.value = '0';
     editIndex = -1; cvCancelarBtn.classList.add('hidden');
-    cvFormSub.textContent = 'Cadastre uma compra ou venda de pó'; updateRsState();
+    cvFormSub.textContent = 'Cadastre uma compra ou venda de pó';
+    updateRsState();
+    updateDescInfo();
   }
   function updateDashboards(){
     let totalCompra = 0, countCompra = 0, totalVenda = 0, countVenda = 0;
@@ -3879,6 +4056,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tipoClass = r.tipo === 'VENDA' ? 'VENDA' : 'COMPRA';
       html += `<tr>
         <td>${escHtml(r.nome || '—')}</td>
+        <td>${escHtml(r.cpf || '—')}</td>
         <td>${escHtml(r.fone || '—')}</td>
         <td><span class="cv-badge ${tipoClass}">${escHtml(tipoClass)}</span></td>
         <td>${escHtml(fmtDateBR(r.data))}</td>
@@ -3888,6 +4066,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="cv-num">${fmtNum(r.rh, 3)}</td>
         <td class="cv-money">${fmtMoneyLocal(r.rs)}</td>
         <td class="cv-actions">
+          <button class="row-edit auth-olive" data-cv-auth="${i}" title="Autorizar e mover para Histórico Compras" aria-label="Autorizar">✓</button>
           <button class="row-edit" data-cv-pdf="${i}" title="Gerar PDF" aria-label="PDF">📄</button>
           <button class="row-edit" data-cv-edit="${i}" title="Editar" aria-label="Editar">✎</button>
           <button class="row-edit" data-cv-del="${i}" title="Excluir" aria-label="Excluir" style="background:#fee2e2;color:#b91c1c;border-color:#fecaca">🗑</button>
@@ -3895,13 +4074,14 @@ document.addEventListener('DOMContentLoaded', () => {
       </tr>`;
     });
     cvTbody.innerHTML = html;
+    cvTbody.querySelectorAll('[data-cv-auth]').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); autorizar(parseInt(btn.dataset.cvAuth, 10)); }); });
     cvTbody.querySelectorAll('[data-cv-pdf]').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); openCvPDF(parseInt(btn.dataset.cvPdf, 10)); }); });
     cvTbody.querySelectorAll('[data-cv-edit]').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); startEdit(parseInt(btn.dataset.cvEdit, 10)); }); });
     cvTbody.querySelectorAll('[data-cv-del]').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); excluir(parseInt(btn.dataset.cvDel, 10)); }); });
   }
-  function openCvPDF(index){
-    const r = registros[index]; if (!r) { alert('Registro não encontrado.'); return; }
-    if (!window.jspdf || !window.jspdf.jsPDF) { alert('Biblioteca de PDF não carregada.'); return; }
+
+  function buildCvDoc(r){
+    if (!window.jspdf || !window.jspdf.jsPDF) { return null; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth(); const pageH = doc.internal.pageSize.getHeight();
@@ -3917,15 +4097,41 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.setTextColor(isVenda ? 6 : 30, isVenda ? 95 : 64, isVenda ? 70 : 175);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
     doc.text('TIPO DE OPERAÇÃO: ' + tipoLabel, margin + 4, 45.5);
-    let y = 60;
-    doc.setTextColor(15, 35, 56); doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    let y = 58;
+    doc.setTextColor(15, 35, 56); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
     doc.text('Nome:', margin, y);
-    doc.setFont('helvetica', 'normal'); doc.text(String(r.nome || '—'), margin + 18, y);
-    y += 7; doc.setFont('helvetica', 'bold'); doc.text('Fone:', margin, y);
-    doc.setFont('helvetica', 'normal'); doc.text(String(r.fone || '—'), margin + 18, y);
-    y += 7; doc.setFont('helvetica', 'bold'); doc.text('Data:', margin, y);
-    doc.setFont('helvetica', 'normal'); doc.text(fmtDateBR(r.data), margin + 18, y);
-    y += 12; const rowH = 9;
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.nome || '—'), margin + 16, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('CPF:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.cpf || '—'), margin + 16, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Fone:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.fone || '—'), margin + 16, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Endereço:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.end || '—'), margin + 22, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Bairro:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.bairro || '—'), margin + 18, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Cidade/UF:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.cidade || '—') + ' / ' + String(r.uf || '—'), margin + 24, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('RG:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.rg || '—'), margin + 16, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Banco:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.banco || '—') + ' / Ag: ' + String(r.agencia || '—') + ' / CC: ' + String(r.conta || '—'), margin + 18, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('PIX:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(String(r.pix || '—'), margin + 16, y);
+    y += 6; doc.setFont('helvetica', 'bold'); doc.text('Data:', margin, y);
+    doc.setFont('helvetica', 'normal'); doc.text(fmtDateBR(r.data), margin + 16, y);
+
+    if (r.autorizadoPor) {
+      y += 8;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(85, 107, 47);
+      doc.text('Autorizado por: ' + r.autorizadoPor, margin, y);
+      if (r.autorizadoEm) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90, 106, 125);
+        doc.text('Data/Hora: ' + new Date(r.autorizadoEm).toLocaleString('pt-BR'), pageW - margin, y, { align: 'right' });
+      }
+    }
+
+    y += 12;
+    const rowH = 9;
     doc.setFillColor(15, 35, 56); doc.rect(margin, y, usableW, rowH, 'F');
     doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
     const colW = usableW / 4;
@@ -3946,42 +4152,73 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.text('VALOR TOTAL (R$):', margin + 4, y + 14);
     doc.setFontSize(18); doc.text(fmtMoneyLocal(r.rs), pageW - margin - 4, y + 15, { align: 'right' });
     y += 34; doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 130, 145);
-    const obs = isVenda ? 'Valor calculado automaticamente conforme os parâmetros vigentes (Payability, cotações e custo operacional).' : 'Valor digitado manualmente pelo operador (compra).';
+    const obs = isVenda ? 'Valor calculado automaticamente conforme os parâmetros vigentes (Payability, cotações, custo operacional e desconto do tipo de cliente).' : 'Valor digitado manualmente pelo operador (compra).';
     doc.text(obs, margin, y);
     doc.setDrawColor(200, 210, 220); doc.line(margin, pageH - 40, pageW - margin, pageH - 40);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 106, 125);
     doc.text('Assinatura: ________________________________', margin, pageH - 30);
     doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(147, 162, 179);
     doc.text('Everton Metais · Sistema de Consulta Técnica · Documento gerado em ' + new Date().toLocaleString('pt-BR'), pageW / 2, pageH - 10, { align: 'center' });
-    const fname = 'everton_' + tipoLabel.toLowerCase() + '_po_' + String(r.data || '').replace(/\D/g,'') + '_' + (index+1) + '.pdf';
+    return doc;
+  }
+
+  function openCvPDF(index){
+    const r = registros[index]; if (!r) { alert('Registro não encontrado.'); return; }
+    const doc = buildCvDoc(r);
+    if (!doc) { alert('Biblioteca de PDF não carregada.'); return; }
+    const tipoLabel = r.tipo === 'VENDA' ? 'venda' : 'compra';
+    const fname = 'everton_' + tipoLabel + '_po_' + String(r.data || '').replace(/\D/g,'') + '_' + (index+1) + '.pdf';
     doc.save(fname);
   }
+  function openCvPoHistPDF(index){
+    const r = historicoCvPo[index]; if (!r) { alert('Registro não encontrado.'); return; }
+    const doc = buildCvDoc(r);
+    if (!doc) { alert('Biblioteca de PDF não carregada.'); return; }
+    const tipoLabel = r.tipo === 'VENDA' ? 'venda' : 'compra';
+    const fname = 'everton_' + tipoLabel + '_po_hist_' + String(r.data || '').replace(/\D/g,'') + '_' + (index+1) + '.pdf';
+    doc.save(fname);
+  }
+
   function salvar(){
     const nome = cvNome.value.trim(); const fone = cvFone.value.trim(); const tipo = cvTipo.value;
     const data = cvData.value || todayISO();
+    const cpf = cvCpf.value.trim();
     const peso = parseFloat(cvPeso.value) || 0; const pd = parseFloat(cvPd.value) || 0;
     const pt = parseFloat(cvPt.value) || 0; const rh = parseFloat(cvRh.value) || 0;
     let rs = parseFloat(cvRs.value) || 0;
     if (peso <= 0) { alert('Informe o peso (maior que zero).'); cvPeso.focus(); return; }
+    const disc = getDiscountForCpf(cpf);
     if (tipo === 'VENDA'){ rs = calcVendaRs(); }
-    const registro = { nome, fone, tipo, data, peso, pd, pt, rh, rs };
+    const registro = {
+      cpf, nome, fone, end: cvEnd.value.trim(), bairro: cvBairro.value.trim(),
+      cidade: cvCidade.value.trim(), uf: cvUf.value.trim().toUpperCase(),
+      rg: cvRg.value.trim(), banco: cvBanco.value.trim(), agencia: cvAgencia.value.trim(),
+      conta: cvConta.value.trim(), pix: cvPix.value.trim(),
+      tipo, data, peso, pd, pt, rh, rs,
+      descontoAplicado: tipo === 'VENDA' ? disc : 0
+    };
     const isNovo = editIndex < 0;
     if (!isNovo) { registros[editIndex] = registro; } else { registros.push(registro); }
     saveRegistros();
-    if (window.auditLog) { try { window.auditLog(isNovo ? 'CV_PO_CRIADO' : 'CV_PO_EDITADO', tipo + ' · ' + (nome || '—') + ' · Peso ' + fmtNum(peso,3) + ' kg · R$ ' + fmtNum(rs,2)); } catch(_){} }
+    if (window.auditLog) { try { window.auditLog(isNovo ? 'CV_PO_CRIADO' : 'CV_PO_EDITADO', tipo + ' · ' + (nome || '—') + ' · CPF ' + (cpf || '—') + ' · Peso ' + fmtNum(peso,3) + ' kg · R$ ' + fmtNum(rs,2)); } catch(_){} }
     const savedIdx = isNovo ? (registros.length - 1) : editIndex;
     render(); clearFields();
     setTimeout(() => { try { openCvPDF(savedIdx); } catch(_){} }, 120);
-    alert('Registro salvo com sucesso!\n\nTipo: ' + tipo + '\nNome: ' + (nome || '—') + '\nValor: ' + fmtMoneyLocal(rs));
+    alert('Registro salvo com sucesso!\n\nTipo: ' + tipo + '\nNome: ' + (nome || '—') + '\nCPF: ' + (cpf || '—') + '\nValor: ' + fmtMoneyLocal(rs));
   }
   function startEdit(i){
     const r = registros[i]; if (!r) return;
     editIndex = i;
+    cvCpf.value = r.cpf || '';
     cvNome.value = r.nome || ''; cvFone.value = r.fone || ''; cvTipo.value = r.tipo || 'COMPRA';
     cvData.value = r.data || todayISO();
+    cvEnd.value = r.end || ''; cvBairro.value = r.bairro || ''; cvCidade.value = r.cidade || '';
+    cvUf.value = r.uf || ''; cvRg.value = r.rg || ''; cvBanco.value = r.banco || '';
+    cvAgencia.value = r.agencia || ''; cvConta.value = r.conta || ''; cvPix.value = r.pix || '';
     cvPeso.value = r.peso; cvPd.value = r.pd; cvPt.value = r.pt; cvRh.value = r.rh; cvRs.value = r.rs;
     cvCancelarBtn.classList.remove('hidden'); cvFormSub.textContent = 'Editando registro #' + (i + 1);
     updateRsState();
+    updateDescInfo();
     if (cvTipo.value === 'COMPRA') cvRs.value = r.rs;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -3993,11 +4230,107 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editIndex === i) clearFields(); else if (editIndex > i) editIndex--;
     render();
   }
+
+  function autorizar(index){
+    const r = registros[index]; if (!r) return;
+    const pwd = prompt('Digite a senha do usuário autorizador (ADM, TRIAGEM ou FINANCEIRO):');
+    if (!pwd) return;
+    const USERS = window.USERS || {};
+    let autorizador = null;
+    for (const k in USERS) {
+      const u = USERS[k];
+      if (!u) continue;
+      const tipo = String(u.type || '').toUpperCase();
+      if (['ADM', 'TRIAGEM', 'FINANCEIRO'].includes(tipo) && u.pass === pwd) {
+        autorizador = k;
+        break;
+      }
+    }
+    if (!autorizador) {
+      alert('Senha inválida ou usuário sem permissão para autorizar.');
+      if (window.auditLog) { try { window.auditLog('CV_PO_AUTORIZACAO_NEGADA', 'Tentativa de autorizar registro ' + (index + 1) + ' (' + (r.nome||'—') + ')'); } catch(_){} }
+      return;
+    }
+    r.autorizado = true;
+    r.autorizadoPor = autorizador;
+    r.autorizadoEm = new Date().toISOString();
+    historicoCvPo.unshift(r);
+    registros.splice(index, 1);
+    saveRegistros();
+    saveHistorico();
+    if (window.auditLog) { try { window.auditLog('CV_PO_AUTORIZADO', (r.tipo||'') + ' · ' + (r.nome||'—') + ' · CPF ' + (r.cpf||'—') + ' · R$ ' + fmtNum(r.rs,2) + ' autorizado por ' + autorizador); } catch(_){} }
+    render();
+    try { if (typeof window.renderHistoricoCvPo === 'function') window.renderHistoricoCvPo(); } catch(_){}
+    setTimeout(() => {
+      const goHist = confirm('✅ Registro autorizado com sucesso!\n\nAutorizado por: ' + autorizador + '\n\nDeseja abrir a aba Histórico Compras para visualizar?');
+      if (goHist) {
+        const tab = document.querySelector('.tab[data-tab="historicocompras"]');
+        if (tab) tab.click();
+      }
+      try { openCvPoHistPDF(0); } catch(_){}
+    }, 200);
+  }
+
+  function renderHistoricoCvPo(){
+    const tbody = document.getElementById('historicoCvPoTbody');
+    const empty = document.getElementById('historicoCvPoEmpty');
+    const sub = document.getElementById('historicoCvPoSub');
+    if (!tbody) return;
+    const n = historicoCvPo.length;
+    if (sub) sub.textContent = n + ' registro' + (n === 1 ? '' : 's') + ' autorizado' + (n === 1 ? '' : 's');
+    if (!n) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
+    if (empty) empty.classList.add('hidden');
+    let html = '';
+    historicoCvPo.forEach((r, i) => {
+      const tipoClass = r.tipo === 'VENDA' ? 'VENDA' : 'COMPRA';
+      let dataAutStr = '—';
+      if (r.autorizadoEm) { try { dataAutStr = new Date(r.autorizadoEm).toLocaleString('pt-BR'); } catch(e){} }
+      html += `<tr>
+        <td>${escHtml(r.nome || '—')}</td>
+        <td>${escHtml(r.cpf || '—')}</td>
+        <td>${escHtml(r.fone || '—')}</td>
+        <td><span class="cv-badge ${tipoClass}">${escHtml(tipoClass)}</span></td>
+        <td>${escHtml(fmtDateBR(r.data))}</td>
+        <td style="text-align:right">${fmtNum(r.peso, 3)} kg</td>
+        <td style="text-align:right">${fmtNum(r.pd, 3)}</td>
+        <td style="text-align:right">${fmtNum(r.pt, 3)}</td>
+        <td style="text-align:right">${fmtNum(r.rh, 3)}</td>
+        <td style="text-align:right;font-weight:700;color:#15803d">${fmtMoneyLocal(r.rs)}</td>
+        <td class="hist-autorizado">${escHtml(r.autorizadoPor || '—')}</td>
+        <td class="hist-data-aut">${escHtml(dataAutStr)}</td>
+        <td style="text-align:center;white-space:nowrap">
+          <button class="row-edit" data-hist-cv-pdf="${i}" title="Abrir PDF" aria-label="Abrir PDF">📄</button>
+          <button class="row-edit" data-hist-cv-del="${i}" title="Excluir do histórico" aria-label="Excluir" style="background:#fee2e2;color:#b91c1c;border-color:#fecaca">🗑</button>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+    tbody.querySelectorAll('[data-hist-cv-pdf]').forEach(btn => {
+      btn.addEventListener('click', e => { e.stopPropagation(); openCvPoHistPDF(parseInt(btn.dataset.histCvPdf, 10)); });
+    });
+    tbody.querySelectorAll('[data-hist-cv-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.histCvDel, 10);
+        const r = historicoCvPo[idx];
+        if (!r) return;
+        if (!confirm('Excluir este registro do histórico?\n\nEsta ação não pode ser desfeita.')) return;
+        historicoCvPo.splice(idx, 1);
+        saveHistorico();
+        if (window.auditLog) { try { window.auditLog('CV_PO_HISTORICO_EXCLUIDO', (r.tipo||'') + ' · ' + (r.nome||'—') + ' · R$ ' + fmtNum(r.rs,2)); } catch(_){} }
+        renderHistoricoCvPo();
+      });
+    });
+  }
+  window.renderHistoricoCvPo = renderHistoricoCvPo;
+
   cvSalvarBtn.addEventListener('click', salvar);
   cvLimparBtn.addEventListener('click', clearFields);
   cvCancelarBtn.addEventListener('click', clearFields);
-  window.updateCvTab = function(){ if (cvTipo.value === 'VENDA') updateRsState(); render(); };
-  clearFields(); render();
+  window.updateCvTab = function(){ if (cvTipo.value === 'VENDA') updateRsState(); render(); updateDescInfo(); };
+  clearFields();
+  render();
+  renderHistoricoCvPo();
 })();
 </script>
 
@@ -4200,8 +4533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.text('Pedido Nº: ' + pedido.numero, margin, 40);
     const dt = new Date(pedido.data);
     doc.text('Data: ' + dt.toLocaleDateString('pt-BR'), pageW - margin, 40, { align: 'right' });
-    
-    // Dados completos do cliente
+
     const cd = pedido.clienteData || {};
     doc.setFillColor(244, 246, 249); doc.roundedRect(margin, 46, usableW, 36, 2, 2, 'F');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(22, 32, 44);
@@ -4215,7 +4547,6 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.text('Banco: ' + (cd.banco || '-') + ' / Ag: ' + (cd.agencia || '-') + ' / CC: ' + (cd.conta || '-'), margin + 110, 71);
     doc.text('PIX: ' + (cd.pix || '-'), margin + 5, 77);
 
-    // NOVO: Autorização no local marcado (entre o bloco de dados e a tabela de produtos)
     if (pedido.autorizadoPor) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(85, 107, 47);
       doc.text('Autorizado por: ' + pedido.autorizadoPor, margin + 5, 87);
@@ -4253,8 +4584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(21, 128, 61);
     doc.text('TOTAL GERAL:', pageW - margin - 76, y + 9);
     doc.setFontSize(13); doc.text(fmt(pedido.total), pageW - margin - 4, y + 9, { align: 'right' });
-    
-    // Assinatura no rodapé (sempre)
+
     doc.setDrawColor(200, 210, 220); doc.line(margin, pageH - 40, pageW - margin, pageH - 40);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 106, 125);
     doc.text('Assinatura: ________________________________', margin, pageH - 30);
@@ -4273,7 +4603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     try {
       if (window.auditLog) { try { window.auditLog('PEDIDO_PDF_ABERTO', 'Abriu PDF do pedido ' + numero); } catch(_){} }
-      
+
       if (!pedido.clienteData) {
         try {
           const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
@@ -4296,8 +4626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) { alert('Erro ao abrir o PDF: ' + e.message); }
   }
   window.openPedidoPDF = openPedidoPDF;
-  
-  // Solicitar autorização do pedido
+
   function solicitarAutorizacaoPedido(numero) {
     const pedido = pedidosSalvos.find(p => p.numero === numero);
     if (!pedido) return;
@@ -4320,11 +4649,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.auditLog) { try { window.auditLog('PEDIDO_AUTORIZACAO_NEGADA', 'Tentativa de autorizar pedido ' + numero + ' sem credencial válida'); } catch(_){} }
       return;
     }
-    
+
     pedido.autorizado = true;
     pedido.autorizadoPor = autorizador;
     pedido.autorizadoEm = new Date().toISOString();
-    
+
     if (!pedido.clienteData) {
       try {
         const clientes = JSON.parse(localStorage.getItem('paizao_clientes') || '[]');
@@ -4332,15 +4661,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (c) pedido.clienteData = c;
       } catch(e){}
     }
-    
+
     savePedidos();
     if (window.auditLog) { try { window.auditLog('PEDIDO_AUTORIZADO', 'Pedido ' + numero + ' autorizado por ' + autorizador); } catch(_){} }
     renderPedidos();
-    renderHistorico();   // NOVO: atualiza a aba Histórico Compras
-    openPedidoPDF(numero); // Abre o PDF logo após autorizar
+    renderHistorico();
+    openPedidoPDF(numero);
   }
 
-  // NOVO: Renderiza Pedidos Salvos (apenas os NÃO autorizados)
   function renderPedidos() {
     if (!pedidosTbody) return;
     const pendentes = pedidosSalvos.filter(p => !p.autorizado);
@@ -4350,9 +4678,8 @@ document.addEventListener('DOMContentLoaded', () => {
     pedidosTbody.innerHTML = pendentes.map(p => {
       const d = new Date(p.data);
       const dataStr = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-      // NOVO: Botão AUTORIZADO no mesmo tamanho do PDF e na cor verde azeitona
       const authBtn = `<button class="row-edit auth-olive" data-pedido-auth="${escHtml(p.numero)}" title="Autorizar pedido" aria-label="Autorizar">✓</button>`;
-      
+
       return `<tr>
         <td><span class="code-chip primary">${escHtml(p.numero)}</span></td>
         <td>${escHtml(dataStr)}</td><td>${escHtml(p.userNome || '')}</td><td>${escHtml(p.fone || '')}</td>
@@ -4365,7 +4692,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
       </tr>`;
     }).join('');
-    
+
     pedidosTbody.querySelectorAll('[data-pedido-auth]').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); solicitarAutorizacaoPedido(btn.dataset.pedidoAuth); }); });
     pedidosTbody.querySelectorAll('[data-pedido-pdf]').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); openPedidoPDF(btn.dataset.pedidoPdf); }); });
     pedidosTbody.querySelectorAll('[data-pedido-del]').forEach(btn => {
@@ -4380,7 +4707,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // NOVO: Renderiza Histórico Compras (apenas os autorizados)
   function renderHistorico() {
     if (!historicoTbody) return;
     const autorizados = pedidosSalvos.filter(p => p.autorizado);
@@ -4539,7 +4865,7 @@ document.addEventListener('DOMContentLoaded', () => {
     saveCart(); renderCart();
     const cartTab = document.querySelector('.tab[data-tab="carrinho"]'); if (cartTab) { cartTab.click(); }
   };
-  
+
   function renderCart() {
     let filteredItems = [...cartItems];
     const filterNome = cartFilterNome.value.trim().toLowerCase();
