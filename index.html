@@ -1219,18 +1219,18 @@
         <div class="field"><label for="poPd1">Teor Pd 1 (g/kg)</label><input type="number" step="0.001" min="0" id="poPd1" value="0"></div>
         <div class="field"><label for="poPt1">Teor Pt 1 (g/kg)</label><input type="number" step="0.001" min="0" id="poPt1" value="0"></div>
         <div class="field"><label for="poRh1">Teor Rh 1 (g/kg)</label><input type="number" step="0.001" min="0" id="poRh1" value="0"></div>
-        <div class="field"><label for="poRs1">R$ 1</label><input type="text" id="poRs1" class="po-readonly" readonly value="—"></div>
+        <div class="field"><label for="poRs1">R$ 1</label><input type="text" id="poRs1" class="po-readonly" readonly value="R$ 0,00"></div>
       </div>
       <div class="po-grid">
         <div class="field"><label for="poPeso2">Peso 2 (kg)</label><input type="number" step="0.001" min="0" id="poPeso2" value="0"></div>
         <div class="field"><label for="poPd2">Teor Pd 2 (g/kg)</label><input type="number" step="0.001" min="0" id="poPd2" value="0"></div>
         <div class="field"><label for="poPt2">Teor Pt 2 (g/kg)</label><input type="number" step="0.001" min="0" id="poPt2" value="0"></div>
         <div class="field"><label for="poRh2">Teor Rh 2 (g/kg)</label><input type="number" step="0.001" min="0" id="poRh2" value="0"></div>
-        <div class="field"><label for="poRs2">R$ 2</label><input type="text" id="poRs2" class="po-readonly" readonly value="—"></div>
+        <div class="field"><label for="poRs2">R$ 2</label><input type="text" id="poRs2" class="po-readonly" readonly value="R$ 0,00"></div>
       </div>
       <div class="po-grid-bottom">
         <div class="field"><label for="poPesoT">Peso Total (kg)</label><input type="text" id="poPesoT" class="po-readonly" readonly value="0,000 kg"></div>
-        <div class="field"><label for="poRsT">R$ Total</label><input type="text" id="poRsT" class="po-readonly" readonly value="—" style="font-size:18px;"></div>
+        <div class="field"><label for="poRsT">R$ Total</label><input type="text" id="poRsT" class="po-readonly" readonly value="R$ 0,00" style="font-size:18px;"></div>
       </div>
     </div>
   </section>
@@ -1295,7 +1295,7 @@
         <div class="field"><label for="cvPd">Teor Pd (g/kg)</label><input type="number" step="0.001" min="0" id="cvPd" value="0"></div>
         <div class="field"><label for="cvPt">Teor Pt (g/kg)</label><input type="number" step="0.001" min="0" id="cvPt" value="0"></div>
         <div class="field"><label for="cvRh">Teor Rh (g/kg)</label><input type="number" step="0.001" min="0" id="cvRh" value="0"></div>
-        <div class="field"><label for="cvRs">R$</label><input type="number" step="0.01" min="0" id="cvRs" value="0"></div>
+        <div class="field"><label for="cvRs">Valor (R$)</label><input type="text" inputmode="decimal" id="cvRs" value="R$ 0,00"></div>
       </div>
       <div class="form-actions">
         <button type="button" class="btn primary" id="cvSalvarBtn">
@@ -1364,7 +1364,7 @@
       <p>Preencha o formulário acima e clique em Salvar.</p>
     </div>
     <div class="footnote">
-      <b>COMPRA:</b> todos os campos são editáveis (R$ digitado manualmente).<br>
+      <b>COMPRA:</b> o R$ é calculado automaticamente com base em peso e teores (sem desconto), mas você pode <b>editar o valor manualmente</b> quando preferir — a edição não altera o peso nem os teores.<br>
       <b>VENDA:</b> informe peso e teores (Pd/Pt/Rh) — o R$ é calculado automaticamente pela mesma regra da aba <b>Pó</b>, com o <b>desconto do tipo do cliente</b> (AGREGADO 10%, AGREGADO2 30%, CLIENTE 20%).<br>
       Clique no botão <b>✓</b> (verde azeitona) para <b>autorizar</b> o lançamento. Será solicitada a senha de um usuário ADM, TRIAGEM ou FINANCEIRO, e o registro será <b>transferido</b> para a aba <b>Histórico Compras</b>.
     </div>
@@ -1987,7 +1987,7 @@ const norm = s => String(s ?? '').toLowerCase()
   .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
 const fmtNum = (n, d=2) => Number(n).toLocaleString('pt-BR',{minimumFractionDigits:d, maximumFractionDigits:d});
 const fmtTeor = n => (n ? fmtNum(n,3) : '—');
-const fmtMoney = n => n > 0 ? 'R$ ' + fmtNum(n,2) : '—';
+const fmtMoney = n => 'R$ ' + fmtNum(Number(n) || 0, 2);
 
 function getDiscountForUser(){
   const t = String(window.currentUserType || '').toUpperCase();
@@ -2144,10 +2144,7 @@ function openModal(item, applyDiscount){
   const nPedras = numPedras(orig);
   const disc = applyDiscount ? getDiscountForUser() : 0;
   const dFactor = 1 - disc;
-  const fmD = n => {
-    const v = (n || 0) * dFactor;
-    return v > 0 ? 'R$ ' + fmtNum(v, 2) : '—';
-  };
+  const fmD = n => 'R$ ' + fmtNum((n || 0) * dFactor, 2);
   const discBadge = '';
   const cods = (orig.cod||[]).map(x => `<span class="code-chip">${esc(x)}</span>`).join('');
   const linha = (nome, teor, valorUn, valorPeca) => teor > 0 ? `
@@ -3873,10 +3870,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const pt2 = parseFloat($('poPt2').value) || 0; const rh2 = parseFloat($('poRh2').value) || 0;
     const rs1 = calcPoValue(p1, pd1, pt1, rh1); const rs2 = calcPoValue(p2, pd2, pt2, rh2);
     const pesoT = p1 + p2; const rsT = rs1 + rs2;
-    $('poRs1').value = rs1 > 0 ? 'R$ ' + fmtNum(rs1, 2) : '—';
-    $('poRs2').value = rs2 > 0 ? 'R$ ' + fmtNum(rs2, 2) : '—';
+    $('poRs1').value = 'R$ ' + fmtNum(rs1, 2);
+    $('poRs2').value = 'R$ ' + fmtNum(rs2, 2);
     $('poPesoT').value = pesoT > 0 ? fmtNum(pesoT, 3) + ' kg' : '0,000 kg';
-    $('poRsT').value = rsT > 0 ? 'R$ ' + fmtNum(rsT, 2) : '—';
+    $('poRsT').value = 'R$ ' + fmtNum(rsT, 2);
   }
   inputs.forEach(id => { const el = $(id); if (el) el.addEventListener('input', updatePo); });
   updatePo();
@@ -3911,6 +3908,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function fmtMoneyLocal(n){ return 'R$ ' + Number(n || 0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
   function fmtDateBR(iso){ if(!iso) return '—'; const parts = String(iso).split('-'); if(parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0]; return iso; }
   function todayISO(){ const d = new Date(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return d.getFullYear() + '-' + m + '-' + day; }
+
+  /* ==== Helpers de valor monetário (parse/format) e flag de edição manual ==== */
+  function parseMoneyBR(val){
+    if (typeof val === 'number') return isFinite(val) ? val : 0;
+    let s = String(val == null ? '' : val).trim();
+    s = s.replace(/R\$\s*/gi, '').replace(/\s+/g, '');
+    if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else if (s.includes(',')) s = s.replace(',', '.');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
+  function formatMoneyBR(val){
+    const n = parseMoneyBR(val);
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  let cvRsDirty = false;
 
   function buscarClientePorCpf(cpf){
     const cpfNorm = String(cpf || '').replace(/\D/g, '');
@@ -4007,21 +4020,41 @@ document.addEventListener('DOMContentLoaded', () => {
     return base * (1 - disc);
   }
   function updateRsState(){
-    if (cvTipo.value === 'VENDA'){ cvRs.readOnly = true; cvRs.classList.add('po-readonly'); const val = calcVendaRs(); cvRs.value = val.toFixed(2); }
-    else { cvRs.readOnly = false; cvRs.classList.remove('po-readonly'); }
+    if (cvTipo.value === 'VENDA'){
+      cvRs.readOnly = true;
+      cvRs.classList.add('po-readonly');
+      cvRs.value = formatMoneyBR(calcVendaRs());
+    } else {
+      cvRs.readOnly = false;
+      cvRs.classList.remove('po-readonly');
+      if (!cvRsDirty) cvRs.value = formatMoneyBR(calcVendaRsBase());
+    }
   }
 
   cvCpf.addEventListener('blur', preencherDadosPorCpf);
   cvCpf.addEventListener('change', preencherDadosPorCpf);
-  [cvPeso, cvPd, cvPt, cvRh].forEach(el => { if (el) el.addEventListener('input', () => { if (cvTipo.value === 'VENDA') updateRsState(); }); });
-  cvTipo.addEventListener('change', () => { updateRsState(); updateDescInfo(); });
+  [cvPeso, cvPd, cvPt, cvRh].forEach(el => {
+    if (el) el.addEventListener('input', () => { cvRsDirty = false; updateRsState(); });
+  });
+  cvTipo.addEventListener('change', () => { cvRsDirty = false; updateRsState(); updateDescInfo(); });
+  cvRs.addEventListener('focus', () => {
+    if (cvRs.readOnly) return;
+    const n = parseMoneyBR(cvRs.value);
+    cvRs.value = n.toFixed(2).replace('.', ',');
+  });
+  cvRs.addEventListener('input', () => { if (!cvRs.readOnly) cvRsDirty = true; });
+  cvRs.addEventListener('blur', () => {
+    if (cvRs.readOnly) return;
+    cvRs.value = formatMoneyBR(cvRs.value);
+  });
 
   function clearFields(){
     cvCpf.value = '';
     cvNome.value = ''; cvFone.value = ''; cvTipo.value = 'COMPRA'; cvData.value = todayISO();
     cvEnd.value = ''; cvBairro.value = ''; cvCidade.value = ''; cvUf.value = '';
     cvRg.value = ''; cvBanco.value = ''; cvAgencia.value = ''; cvConta.value = ''; cvPix.value = '';
-    cvPeso.value = '0'; cvPd.value = '0'; cvPt.value = '0'; cvRh.value = '0'; cvRs.value = '0';
+    cvPeso.value = '0'; cvPd.value = '0'; cvPt.value = '0'; cvRh.value = '0';
+    cvRsDirty = false;
     editIndex = -1; cvCancelarBtn.classList.add('hidden');
     cvFormSub.textContent = 'Cadastre uma compra ou venda de pó';
     updateRsState();
@@ -4185,7 +4218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cpf = cvCpf.value.trim();
     const peso = parseFloat(cvPeso.value) || 0; const pd = parseFloat(cvPd.value) || 0;
     const pt = parseFloat(cvPt.value) || 0; const rh = parseFloat(cvRh.value) || 0;
-    let rs = parseFloat(cvRs.value) || 0;
+    let rs = parseMoneyBR(cvRs.value);
     if (peso <= 0) { alert('Informe o peso (maior que zero).'); cvPeso.focus(); return; }
     const disc = getDiscountForCpf(cpf);
     if (tipo === 'VENDA'){ rs = calcVendaRs(); }
@@ -4215,11 +4248,13 @@ document.addEventListener('DOMContentLoaded', () => {
     cvEnd.value = r.end || ''; cvBairro.value = r.bairro || ''; cvCidade.value = r.cidade || '';
     cvUf.value = r.uf || ''; cvRg.value = r.rg || ''; cvBanco.value = r.banco || '';
     cvAgencia.value = r.agencia || ''; cvConta.value = r.conta || ''; cvPix.value = r.pix || '';
-    cvPeso.value = r.peso; cvPd.value = r.pd; cvPt.value = r.pt; cvRh.value = r.rh; cvRs.value = r.rs;
+    cvPeso.value = r.peso; cvPd.value = r.pd; cvPt.value = r.pt; cvRh.value = r.rh;
+    cvRs.value = formatMoneyBR(r.rs);
     cvCancelarBtn.classList.remove('hidden'); cvFormSub.textContent = 'Editando registro #' + (i + 1);
+    cvRsDirty = false;
     updateRsState();
+    if (cvTipo.value === 'COMPRA') { cvRs.value = formatMoneyBR(r.rs); cvRsDirty = true; }
     updateDescInfo();
-    if (cvTipo.value === 'COMPRA') cvRs.value = r.rs;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function excluir(i){
