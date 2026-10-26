@@ -1512,7 +1512,7 @@
     <div class="form-body">
       <div class="grid2">
         <div class="field"><label for="usrNome">Nome completo</label><input type="text" id="usrNome" placeholder="Ex.: João da Silva" autocomplete="off"></div>
-        <div class="field"><label for="usrUser">Usuário</label><input type="text" id="usrUser" maxlength="20" placeholder="SOMENTE LETRAS" autocomplete="off" style="text-transform:uppercase;font-weight:700;letter-spacing:1px"></div>
+        <div class="field"><label for="usrUser">Usuário</label><input type="text" id="usrUser" maxlength="20" placeholder="LETRAS E NÚMEROS" autocomplete="off" style="text-transform:uppercase;font-weight:700;letter-spacing:1px"></div>
         <div class="field"><label for="usrPass">Senha</label><input type="text" id="usrPass" maxlength="30" autocomplete="off"></div>
         <div class="field">
           <label for="usrTipo">Tipo de usuário</label>
@@ -3080,9 +3080,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const faceStatus = document.getElementById('faceStatus');
   const faceCancel = document.getElementById('faceCancel');
   document.body.style.overflow = 'hidden';
+  /* FIX: aceitar números no usuário para permitir sufixo numérico (ex.: JOAO2) */
   userInput.addEventListener('input', e => {
     const pos = e.target.selectionStart;
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     try { e.target.setSelectionRange(pos, pos); } catch(_){}
   });
   setTimeout(() => { try { userInput.focus(); } catch(_){} }, 60);
@@ -3422,24 +3423,58 @@ document.addEventListener('DOMContentLoaded', () => {
     cadFormSub.textContent = 'Editando: ' + (c.nome || ('#' + i));
     cadNome.focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  /* FIX 1: ao excluir cliente, remover usuário vinculado (nome + telefone) */
   function deleteCliente(i){
     const c = clientes[i]; if(!c) return;
-    if(!confirm(`Excluir o cliente "${c.nome}"?`)) return;
+    if(!confirm(`Excluir o cliente "${c.nome}"?\n\nO usuário de login vinculado (mesmo nome e telefone) também será removido.`)) return;
     if (c.selfieStoragePath && window.__fbDeleteImage){ try { window.__fbDeleteImage(c.selfieStoragePath); } catch(_){} }
     clientes.splice(i, 1); saveClientes();
+    try {
+      const USERS = window.USERS || {};
+      const nomeLower = normalizarNome(c.nome);
+      const foneDigits = normalizarFone(c.fone);
+      if (nomeLower && foneDigits) {
+        const removedKeys = [];
+        for (const k of Object.keys(USERS)) {
+          if (['EVERTON', 'PROGRAMADOR', 'SERGIO'].includes(k)) continue;
+          const u = USERS[k];
+          if (!u) continue;
+          if (u.type === 'COMPRADOR' &&
+              normalizarNome(u.nome) === nomeLower &&
+              String(u.pass || '') === foneDigits) {
+            removedKeys.push(k);
+          }
+        }
+        for (const k of removedKeys) {
+          const u = USERS[k];
+          if (u && u.selfieStoragePath && window.__fbDeleteImage) { try { window.__fbDeleteImage(u.selfieStoragePath); } catch(_){} }
+          delete USERS[k];
+        }
+        if (removedKeys.length > 0) {
+          if (window.saveUsers) window.saveUsers();
+          if (typeof window.renderUsuarios === 'function') { try { window.renderUsuarios(); } catch(_){} }
+        }
+      }
+    } catch(_){}
     if (window.auditLog) window.auditLog('CLIENTE_EXCLUIDO', 'Nome: ' + (c.nome || '#id'));
     renderCadastro();
     if(editIndex === i) clearFields(); else if(editIndex > i) editIndex--;
   }
+  /* FIX 2: gera usuário com sufixo NUMÉRICO (JOAO, JOAO2, JOAO3...) em vez de letras */
   function gerarUsuarioUnico(nome, USERS){
-    const primeiroNome = (String(nome).trim().split(/\s+/)[0] || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+    let primeiroNome = (String(nome).trim().split(/\s+/)[0] || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase().replace(/[^A-Z]/g, '');
     if(!primeiroNome) return '';
+    if (primeiroNome.length > 15) primeiroNome = primeiroNome.slice(0, 15);
     let userKey = primeiroNome;
     if(!USERS[userKey]) return userKey;
-    const todasLetras = String(nome).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
-    let i = primeiroNome.length;
-    while(USERS[userKey] && i < todasLetras.length){ userKey = todasLetras.slice(0, i + 1); i++; }
-    while(USERS[userKey]) userKey += 'X';
+    let suffix = 2;
+    while(USERS[userKey]){
+      userKey = primeiroNome + suffix;
+      suffix++;
+      if (suffix > 99999) return primeiroNome + Date.now().toString().slice(-4);
+    }
     return userKey;
   }
   async function salvar(){
@@ -3548,6 +3583,14 @@ document.addEventListener('DOMContentLoaded', () => {
   selfieCancel.addEventListener('click', closeSelfie);
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && selfieOverlay.classList.contains('open')){ closeSelfie(); } });
   renderCadastro();
+  /* FIX 3: função exposta para o módulo Usuários recarregar os clientes após exclusão */
+  window.reloadCadastroFromStorage = function(){
+    try {
+      clientes = JSON.parse(localStorage.getItem(LS_CAD) || '[]');
+      if(!Array.isArray(clientes)) clientes = [];
+      renderCadastro();
+    } catch(e){}
+  };
 })();
 </script>
 
@@ -3562,6 +3605,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PROTECTED = ['EVERTON', 'SERGIO', 'PROGRAMADOR'];
   let editUser = null; let selfieData = '';
   function escHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function normalizarNome(s){ return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' '); }
   function getAllowedFromUI(){ return Array.from(document.querySelectorAll('[data-perm]')).filter(cb => cb.checked).map(cb => cb.dataset.perm); }
   function setAllowedToUI(list){ document.querySelectorAll('[data-perm]').forEach(cb => { cb.checked = Array.isArray(list) ? list.includes(cb.dataset.perm) : false; }); }
   function clearFields(){
@@ -3614,21 +3658,44 @@ document.addEventListener('DOMContentLoaded', () => {
     usrFormSub.textContent = 'Editando usuário: ' + userKey;
     usrNome.focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  /* FIX 4: ao excluir usuário, remover também o cliente vinculado (mesmo nome + telefone = pass) */
   function deleteUser(userKey){
     if(PROTECTED.includes(userKey)){ alert('Este usuário não pode ser excluído.'); return; }
     const USERS = window.USERS || {}; const u = USERS[userKey]; if(!u) return;
-    if(!confirm(`Excluir o usuário "${userKey}"?`)) return;
+    if(!confirm(`Excluir o usuário "${userKey}"?\n\nO cadastro de cliente vinculado (mesmo nome e telefone) também será removido.`)) return;
     if (u.selfieStoragePath && window.__fbDeleteImage){ try { window.__fbDeleteImage(u.selfieStoragePath); } catch(_){} }
     delete USERS[userKey]; if (window.saveUsers) window.saveUsers();
+    try {
+      if (u.type === 'COMPRADOR' && u.nome) {
+        const passStr = String(u.pass || '');
+        if (/^\d{10,11}$/.test(passStr)) {
+          const nomeLower = normalizarNome(u.nome);
+          const LS_CAD = 'paizao_clientes';
+          let arr = JSON.parse(localStorage.getItem(LS_CAD) || '[]');
+          if (Array.isArray(arr)) {
+            const before = arr.length;
+            arr = arr.filter(c => {
+              const sameName = normalizarNome(c.nome) === nomeLower;
+              const samePhone = String(c.fone || '').replace(/\D/g, '') === passStr;
+              return !(sameName && samePhone);
+            });
+            if (arr.length !== before) {
+              localStorage.setItem(LS_CAD, JSON.stringify(arr));
+              if (typeof window.reloadCadastroFromStorage === 'function') { try { window.reloadCadastroFromStorage(); } catch(_){} }
+            }
+          }
+        }
+      }
+    } catch(_){}
     if (window.auditLog) window.auditLog('USUARIO_EXCLUIDO', 'Login: ' + userKey);
     render(); if(editUser === userKey) clearFields();
   }
   async function salvar(){
     const USERS = window.USERS || {};
-    const nome = usrNome.value.trim(); const user = usrUser.value.trim().toUpperCase().replace(/[^A-Z]/g,'');
+    const nome = usrNome.value.trim(); const user = usrUser.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
     const pass = usrPass.value.trim(); const tipo = usrTipo.value;
     if(!nome){ alert('Informe o nome.'); usrNome.focus(); return; }
-    if(!user){ alert('Informe o usuário (apenas letras).'); usrUser.focus(); return; }
+    if(!user){ alert('Informe o usuário (letras e números).'); usrUser.focus(); return; }
     if(!pass){ alert('Informe a senha.'); usrPass.focus(); return; }
     if(!editUser && USERS[user]){ alert('Já existe um usuário com este login.'); usrUser.focus(); return; }
     const perms = getAllowedFromUI();
@@ -3671,9 +3738,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     setAllowedToUI(defaults[t] || []);
   });
+  /* FIX 5: aceitar números no usuário (para permitir JOAO2, MARIA3, etc.) */
   usrUser.addEventListener('input', e => {
     const pos = e.target.selectionStart;
-    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g,'');
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
     try { e.target.setSelectionRange(pos, pos); } catch(_){}
   });
   usrSelfieRemove.addEventListener('click', () => { selfieData = ''; usrSelfiePrev.src = ''; usrSelfiePrev.style.display = 'none'; usrSelfieRemove.classList.add('hidden'); });
@@ -3909,7 +3977,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function fmtDateBR(iso){ if(!iso) return '—'; const parts = String(iso).split('-'); if(parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0]; return iso; }
   function todayISO(){ const d = new Date(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return d.getFullYear() + '-' + m + '-' + day; }
 
-  /* ==== Helpers de valor monetário (parse/format) e flag de edição manual ==== */
   function parseMoneyBR(val){
     if (typeof val === 'number') return isFinite(val) ? val : 0;
     let s = String(val == null ? '' : val).trim();
