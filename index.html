@@ -5652,10 +5652,47 @@ document.addEventListener('DOMContentLoaded', () => {
         toast('Pedido ' + id + ' encaminhado para produção!', 'success');
         loadedOrderId = null;
       } else {
-        if (loadedOrderId) {
-          const idx = db.orders.findIndex(x => x.id === loadedOrderId);
-          if (idx !== -1) db.orders.splice(idx, 1);
+        // Determina a chave (referência/código) da peça para checagem de estoque
+        let ordemIdx = -1;
+        if (loadedOrderId) ordemIdx = db.orders.findIndex(x => x.id === loadedOrderId);
+
+        let codigo = '';
+        if (ordemIdx !== -1) {
+          const o = db.orders[ordemIdx];
+          codigo = (o.referencia || o.nossoCodigo || o.codOriginal || o.produto || '').toString().trim();
+        }
+        if (!codigo) {
+          let vRefInterna = '';
+          if (typeof DATA !== 'undefined' && Array.isArray(DATA)) {
+            const co = $('#v-codOriginal').value.trim();
+            const nc = $('#v-nossoCodigo').value.trim();
+            const ff = (val) => val ? (DATA.find(d => (Array.isArray(d.cod) && d.cod.some(c => String(c).includes(val))) || (d.ref != null && String(d.ref) === val)) || null) : null;
+            const found = ff(co) || ff(nc);
+            if (found) vRefInterna = String(found.ref || '');
+          }
+          codigo = (vRefInterna || $('#v-nossoCodigo').value.trim() || $('#v-codOriginal').value.trim() || produto || '').toString().trim();
+        }
+
+        // Bloqueia a venda se o estoque da peça estiver zerado
+        if (typeof window.__getEstoqueQtd === 'function') {
+          const emEstoque = window.__getEstoqueQtd(codigo);
+          if (!codigo || emEstoque <= 0) {
+            toast('Estoque é 0! Não é possível finalizar a venda desta peça.', 'warn');
+            return;
+          }
+        }
+
+        if (ordemIdx !== -1) {
+          const o = db.orders[ordemIdx];
+          if (typeof window.__removeEstoque === 'function' && codigo) {
+            try { window.__removeEstoque(codigo, o.qtd || qtd); } catch(e){}
+          }
+          o.isHistorico = true;
+          o.finalizadoEm = Date.now();
+          o.lidoVendedor = true;
           loadedOrderId = null;
+        } else if (typeof window.__removeEstoque === 'function' && codigo) {
+          try { window.__removeEstoque(codigo, qtd); } catch(e){}
         }
 
         saveDB();
@@ -5768,7 +5805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         trocaDiscountApplied = addDiscount;
         descInput.value = fmtMoney(currentDiscount + addDiscount);
         updateTotal();
-        toast('TROCA ativada: desconto de 20% (' + fmtMoney(addDiscount) + ') aplicado.', 'success');
+        toast('TROCA ativada: desconto de ' + fmtMoney(addDiscount) + ' aplicado.', 'success');
       } else {
         toast('Informe um Cód. Original válido para aplicar o desconto de TROCA.', 'warn');
       }
@@ -5777,7 +5814,7 @@ document.addEventListener('DOMContentLoaded', () => {
       descInput.value = fmtMoney(Math.max(0, currentDiscount - trocaDiscountApplied));
       trocaDiscountApplied = 0;
       updateTotal();
-      toast('TROCA desativada: desconto de 20% removido.', 'info');
+      toast('TROCA desativada: desconto removido.', 'info');
     }
   });
 
@@ -5836,8 +5873,12 @@ document.addEventListener('DOMContentLoaded', () => {
     o.produtor = (produtor || '').trim();
     o.lidoVendedor = false;
     saveDB();
+    if (typeof window.__addEstoque === 'function') {
+      const codigo = (o.referencia || o.nossoCodigo || o.codOriginal || o.produto || '').toString().trim();
+      if (codigo) { try { window.__addEstoque(codigo, o.produto || codigo, o.qtd || 1); } catch(e){} }
+    }
     playChime(1040);
-    toast(id + ' finalizado por ' + (o.produtor||'—') + '! Retornado para Vendas e enviado ao Histórico.', 'success');
+    toast(id + ' finalizado por ' + (o.produtor||'—') + '! Retornado para Vendas, enviado ao Histórico e ao Estoque.', 'success');
   };
 
   window.__vendas_ampliarFoto = function(id){
@@ -5845,6 +5886,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!o || !o.foto) return;
     const url = (typeof imgSrc === 'function') ? imgSrc(o.foto, 'w1600') : String(o.foto);
     if (typeof openFullscreenImage === 'function') openFullscreenImage(url);
+  };
+
+  window.__vendas_excluirHistorico = function(id){
+    const idx = db.orders.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const p = prompt('Digite a senha do Programador ou ADM para excluir este lançamento:');
+    if (p === null) return;
+    const U = window.USERS || {};
+    let autorizado = false;
+    for (const k in U) {
+      const u = U[k];
+      if (u && u.type === 'ADM' && u.pass === p) { autorizado = true; break; }
+    }
+    if (!autorizado) { toast('Senha incorreta.', 'warn'); return; }
+    db.orders.splice(idx, 1);
+    saveDB();
+    playChime(720);
+    toast('Lançamento ' + id + ' excluído.', 'success');
   };
 
   const bellBtn = $('#v-bell');
@@ -5998,7 +6057,8 @@ document.addEventListener('DOMContentLoaded', () => {
       items = items.filter(o =>
         (o.id||'').toLowerCase().includes(q) ||
         (o.codOriginal||'').toLowerCase().includes(q) ||
-        (o.nossoCodigo||'').toLowerCase().includes(q)
+        (o.nossoCodigo||'').toLowerCase().includes(q) ||
+        (o.produtor||'').toLowerCase().includes(q)
       );
     }
     const hc = $('#v-hist-count'); if (hc) hc.textContent = items.length + ' pedido(s)';
@@ -6020,7 +6080,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const produtor = o.produtor ? esc(o.produtor) : '—';
       
       return '<div class="v-hist-item">' +
-        '<div class="v-hi-line"><b>' + esc(o.id) + '</b> <span>Data: ' + dataStr + '</span></div>' +
+        '<div class="v-hi-line" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+          '<span><b>' + esc(o.id) + '</b> <span>Data: ' + dataStr + '</span></span>' +
+          '<button type="button" onclick="window.__vendas_excluirHistorico(\'' + esc(o.id) + '\')" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;min-width:30px;height:26px;line-height:1;cursor:pointer;font-size:14px;padding:0 7px;" title="Excluir (requer senha ADM)">🗑</button>' +
+        '</div>' +
         '<div class="v-hi-line v-hi-meta">Cód. Original: ' + codOriginal + ' · Nosso Código: ' + nossoCodigo + '</div>' +
         '<div class="v-hi-line v-hi-meta">Tempo de Produção: ' + tempoProd + ' · Produzido por: ' + produtor + '</div>' +
       '</div>';
@@ -6418,6 +6481,41 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expor para uso eventual
   window.__caixaRender = renderCaixa;
   window.__estoqueRender = renderEstoque;
+
+  window.__addEstoque = function(codigo, descricao, qtd){
+    codigo = String(codigo || '').trim();
+    descricao = String(descricao || '').trim();
+    qtd = parseInt(qtd, 10);
+    if (!codigo || !isFinite(qtd) || qtd <= 0) return false;
+    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    let reg;
+    if (idx >= 0){ estoque[idx].qtd += qtd; reg = estoque[idx]; }
+    else { reg = { codigo: codigo, descricao: descricao, qtd: qtd }; estoque.push(reg); }
+    saveEstoque();
+    handleStockAlert(reg);
+    renderEstoque();
+    return true;
+  };
+
+  window.__removeEstoque = function(codigo, qtd){
+    codigo = String(codigo || '').trim();
+    qtd = parseInt(qtd, 10);
+    if (!codigo || !isFinite(qtd) || qtd <= 0) return false;
+    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    if (idx < 0) return false;
+    estoque[idx].qtd -= qtd;
+    if (estoque[idx].qtd <= 0) estoque.splice(idx, 1);
+    saveEstoque();
+    renderEstoque();
+    return true;
+  };
+
+  window.__getEstoqueQtd = function(codigo){
+    codigo = String(codigo || '').trim();
+    if (!codigo) return 0;
+    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    return idx >= 0 ? (parseInt(estoque[idx].qtd, 10) || 0) : 0;
+  };
 })();
 </script>
 
