@@ -656,6 +656,12 @@ setTimeout(restoreOnce, 1100);
   .type-badge.CLIENTE{background:#fef3c7;color:#b45309;border:1px solid #fcd34d}
   .type-badge.TRIAGEM{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8}
   .type-badge.FINANCEIRO{background:#cffafe;color:#155e75;border:1px solid #a5f3fc}
+  .type-badge.VENDEDOR{background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe}
+  .type-badge.VENDEDOR_EXTERNO{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe}
+  .type-badge.VENDEDOR_EXTERNO_1{background:#f5f3ff;color:#5b21b6;border:1px solid #ede9fe}
+  .type-badge.VENDEDOR_EXTERNO_2{background:#f3e8ff;color:#6b21a8;border:1px solid #e9d5ff}
+  .type-badge.VENDEDOR_EXTERNO_3{background:#fae8ff;color:#86198f;border:1px solid #f5d0fe}
+  .type-badge.PRODUCAO{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}
   .perm-chip{display:inline-block;font-size:10.5px;font-weight:600;background:#f1f5f9;color:#475569;
     border:1px solid #e2e8f0;padding:1px 6px;border-radius:6px;margin:1px 2px 1px 0}
   .usr-perm-box{display:flex;flex-wrap:wrap;gap:14px;padding:10px 12px;
@@ -1647,6 +1653,12 @@ setTimeout(restoreOnce, 1100);
             <option value="CLIENTE">CLIENTE (20% desc.)</option>
             <option value="TRIAGEM">TRIAGEM</option>
             <option value="FINANCEIRO">FINANCEIRO</option>
+            <option value="VENDEDOR">VENDEDOR</option>
+            <option value="VENDEDOR_EXTERNO">VENDEDOR EXTERNO</option>
+            <option value="VENDEDOR_EXTERNO_1">VENDEDOR EXTERNO 1</option>
+            <option value="VENDEDOR_EXTERNO_2">VENDEDOR EXTERNO 2</option>
+            <option value="VENDEDOR_EXTERNO_3">VENDEDOR EXTERNO 3</option>
+            <option value="PRODUCAO">PRODUÇÃO</option>
           </select>
         </div>
       </div>
@@ -4017,8 +4029,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const perms = getAllowedFromUI();
     if(!perms.length){ alert('Selecione ao menos uma permissão de acesso.'); return; }
     const finalUser = editUser || user;
-    const labelMap = { ADM: 'Administrador', COMPRADOR: 'Comprador', AGREGADO: 'Agregado', AGREGADO2: 'Agregado 2', CLIENTE: 'Cliente', TRIAGEM: 'Triagem', FINANCEIRO: 'Financeiro' };
-    const roleMap = { ADM: 'admin', COMPRADOR: 'comprador', AGREGADO: 'agregado', AGREGADO2: 'agregado2', CLIENTE: 'cliente', TRIAGEM: 'triagem', FINANCEIRO: 'financeiro' };
+    const labelMap = { ADM: 'Administrador', COMPRADOR: 'Comprador', AGREGADO: 'Agregado', AGREGADO2: 'Agregado 2', CLIENTE: 'Cliente', TRIAGEM: 'Triagem', FINANCEIRO: 'Financeiro', VENDEDOR: 'Vendedor', VENDEDOR_EXTERNO: 'Vendedor Externo', VENDEDOR_EXTERNO_1: 'Vendedor Externo 1', VENDEDOR_EXTERNO_2: 'Vendedor Externo 2', VENDEDOR_EXTERNO_3: 'Vendedor Externo 3', PRODUCAO: 'Produção' };
+    const roleMap = { ADM: 'admin', COMPRADOR: 'comprador', AGREGADO: 'agregado', AGREGADO2: 'agregado2', CLIENTE: 'cliente', TRIAGEM: 'triagem', FINANCEIRO: 'financeiro', VENDEDOR: 'vendedor', VENDEDOR_EXTERNO: 'vendedor_externo', VENDEDOR_EXTERNO_1: 'vendedor_externo_1', VENDEDOR_EXTERNO_2: 'vendedor_externo_2', VENDEDOR_EXTERNO_3: 'vendedor_externo_3', PRODUCAO: 'producao' };
     const existing = USERS[finalUser] || {};
     let selfieFinal = selfieData || ''; let selfiePath = existing.selfieStoragePath || ''; let precisaUpload = false;
     if (existing.selfie === selfieFinal) { }
@@ -4053,7 +4065,13 @@ document.addEventListener('DOMContentLoaded', () => {
       AGREGADO2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
       CLIENTE: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
       TRIAGEM: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao'],
-      FINANCEIRO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_historico']
+      FINANCEIRO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_historico'],
+      VENDEDOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
+      VENDEDOR_EXTERNO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
+      VENDEDOR_EXTERNO_1: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
+      VENDEDOR_EXTERNO_2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
+      VENDEDOR_EXTERNO_3: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas'],
+      PRODUCAO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao']
     };
     setAllowedToUI(defaults[t] || []);
   });
