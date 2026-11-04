@@ -1966,6 +1966,7 @@ setTimeout(restoreOnce, 1100);
         <button type="button" class="v-tab" data-vtab="historico">Histórico</button>
         <button type="button" class="v-tab" data-vtab="caixa">Fluxo de Caixa</button>
         <button type="button" class="v-tab" data-vtab="estoque">Estoque</button>
+        <button type="button" class="v-tab" data-vtab="catalogo">Catálogo</button>
       </nav>
 
       <div class="v-view" id="v-view-vendas">
@@ -1999,7 +2000,11 @@ setTimeout(restoreOnce, 1100);
                   <div class="v-field"><label>Cód. Original</label><input type="text" id="v-codOriginal" autocomplete="off" spellcheck="false"><div style="font-size:10.5px;color:#93a2b3;margin-top:3px">Marque TROCA para aplicar 20% de desconto</div></div>
                   <div class="v-field"><label>Nosso Código</label><input type="text" id="v-nossoCodigo" autocomplete="off"></div>
                 </div>
-                <div class="v-field"><label>Descrição do Produto *</label><input type="text" id="v-produto" required autocomplete="off"></div>
+                <div class="v-field" style="position:relative;">
+                  <label>Descrição do Produto *</label>
+                  <input type="text" id="v-produto" required autocomplete="off">
+                  <div id="v-catalogo-sugestoes" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:80;background:#fff;border:1px solid #e2e7ee;border-radius:8px;box-shadow:0 10px 28px rgba(16,32,48,.18);max-height:260px;overflow:auto;"></div>
+                </div>
                 <div class="v-row-3">
                   <div class="v-field"><label>Qtd. *</label><input type="number" id="v-qtd" min="1" value="1" required></div>
                   <div class="v-field"><label>Valor Unit. (R$)</label><input type="text" id="v-valorUnit" value="R$ 0,00"></div>
@@ -2145,6 +2150,9 @@ setTimeout(restoreOnce, 1100);
               <div style="margin-top:14px;font-size:12px;color:#93a2b3;line-height:1.5;">
                 <b>Observação:</b> ao salvar uma peça com quantidade <b>≤ 2</b>, será enviado um alerta para a aba <b>Vendas</b>.
               </div>
+              <div style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;">
+                <button type="button" class="v-btn" id="es-import-catalogo" style="width:100%;">📥 Importar todo o catálogo (qtd 0)</button>
+              </div>
             </div>
           </section>
           <section class="v-card">
@@ -2163,6 +2171,241 @@ setTimeout(restoreOnce, 1100);
             </div>
           </section>
         </div>
+      </div>
+
+      <!-- NOVA ABA: CATÁLOGO (Premium Catalisadores) -->
+      <style>
+        #v-view-catalogo{--cat-bg:#0a0b0f;--cat-bg2:#10121a;--cat-panel:#141722;--cat-panel2:#1b1f2e;--cat-line:rgba(255,255,255,.07);--cat-text:#eceef4;--cat-muted:#8a8fa3;--cat-gold:#c6cad4;--cat-gold2:#eef0f5;--cat-emerald:#22c55e;--cat-red:#ef4444;--cat-blue:#38bdf8}
+        #v-view-catalogo{background:var(--cat-bg);color:var(--cat-text);min-height:70vh;border-radius:12px;padding:0;overflow:hidden;font-family:'Inter',system-ui,sans-serif}
+        #v-view-catalogo *{box-sizing:border-box;margin:0;padding:0}
+        #v-view-catalogo h1,#v-view-catalogo h2,#v-view-catalogo h3,#v-view-catalogo h4{font-family:'Sora',sans-serif}
+        #v-view-catalogo .cat-bar{max-width:1240px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--cat-line);background:linear-gradient(180deg,rgba(10,11,15,.92),rgba(10,11,15,.6))}
+        #v-view-catalogo .cat-brand{display:flex;align-items:center;gap:12px;cursor:default;user-select:none}
+        #v-view-catalogo .cat-brand-ico{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(145deg,#1d2132,#0e1018);border:1px solid var(--cat-line);border-radius:12px}
+        #v-view-catalogo .cat-brand-name{font-family:'Sora',sans-serif;font-weight:800;font-size:1.08rem;letter-spacing:.5px;line-height:1;color:var(--cat-text)}
+        #v-view-catalogo .cat-brand-name .accent{background:linear-gradient(90deg,var(--cat-gold),var(--cat-gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+        #v-view-catalogo .cat-brand-tag{font-size:.6rem;letter-spacing:2.5px;color:var(--cat-muted);text-transform:uppercase;margin-top:4px}
+        #v-view-catalogo .cat-search{flex:1;max-width:520px;position:relative;margin-left:8px}
+        #v-view-catalogo .cat-search input{width:100%;padding:11px 44px 11px 16px;border-radius:999px;background:var(--cat-panel);border:1px solid var(--cat-line);color:var(--cat-text);font-family:inherit;font-size:.9rem;outline:none}
+        #v-view-catalogo .cat-search input:focus{border-color:rgba(205,209,219,.5)}
+        #v-view-catalogo .cat-search button{position:absolute;right:5px;top:5px;bottom:5px;width:34px;border-radius:999px;background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));border:none;cursor:pointer;color:#160f00}
+        #v-view-catalogo .cat-header-actions{display:flex;align-items:center;gap:10px;margin-left:auto}
+        #v-view-catalogo .cat-cart-btn{position:relative;width:42px;height:42px;border-radius:12px;background:var(--cat-panel);border:1px solid var(--cat-line);cursor:pointer;color:var(--cat-text)}
+        #v-view-catalogo .cat-cart-badge{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));color:#160f00;border-radius:999px;font-size:.66rem;font-weight:700;display:grid;place-items:center}
+        #v-view-catalogo .cat-admin-btn,#v-view-catalogo .cat-logout-btn{height:40px;padding:0 13px;border-radius:11px;cursor:pointer;font-weight:600;font-family:inherit;font-size:.84rem;display:flex;align-items:center;gap:6px}
+        #v-view-catalogo .cat-admin-btn{background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));color:#160f00;border:none}
+        #v-view-catalogo .cat-logout-btn{background:var(--cat-panel);color:var(--cat-text);border:1px solid var(--cat-line)}
+        #v-view-catalogo .cat-hero{max-width:1240px;margin:0 auto;padding:30px 20px 20px;text-align:center}
+        #v-view-catalogo .cat-hero .kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:var(--cat-panel);border:1px solid var(--cat-line);font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--cat-gold);font-weight:600}
+        #v-view-catalogo .cat-hero h1{font-size:clamp(1.5rem,3.6vw,2.6rem);font-weight:800;line-height:1.1;margin:16px auto 10px;max-width:820px;letter-spacing:-.5px}
+        #v-view-catalogo .cat-hero h1 .accent{background:linear-gradient(100deg,var(--cat-gold),var(--cat-gold2),#9aa0ad);-webkit-background-clip:text;background-clip:text;color:transparent}
+        #v-view-catalogo .cat-hero p{color:var(--cat-muted);max-width:640px;margin:0 auto;font-size:.95rem;line-height:1.6}
+        #v-view-catalogo .cat-hero-stats{display:flex;justify-content:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+        #v-view-catalogo .cat-stat{background:var(--cat-panel);border:1px solid var(--cat-line);border-radius:14px;padding:12px 20px;text-align:center;min-width:112px}
+        #v-view-catalogo .cat-stat b{font-family:'Sora',sans-serif;font-size:1.4rem;color:var(--cat-gold)}
+        #v-view-catalogo .cat-stat span{display:block;font-size:.7rem;color:var(--cat-muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+        #v-view-catalogo .cat-filters{max-width:1240px;margin:18px auto 6px;padding:0 20px;display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+        #v-view-catalogo .cat-fbtn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;background:var(--cat-panel);border:1px solid var(--cat-line);color:var(--cat-text);cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+        #v-view-catalogo .cat-fbtn .cnt{background:var(--cat-panel2);border-radius:999px;padding:2px 8px;font-size:.7rem;color:var(--cat-muted)}
+        #v-view-catalogo .cat-fbtn.active{background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));color:#160f00;border-color:transparent}
+        #v-view-catalogo .cat-fbtn.active .cnt{background:rgba(0,0,0,.18);color:#160f00}
+        #v-view-catalogo .cat-results{max-width:1240px;margin:10px auto 14px;padding:0 20px;color:var(--cat-muted);font-size:.86rem}
+        #v-view-catalogo .cat-grid{max-width:1240px;margin:0 auto;padding:8px 20px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+        #v-view-catalogo .cat-card{position:relative;background:linear-gradient(180deg,var(--cat-panel),var(--cat-bg2));border:1px solid var(--cat-line);border-radius:16px;padding:16px;overflow:hidden;display:flex;flex-direction:column}
+        #v-view-catalogo .cat-card .badge{align-self:flex-start;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:10px}
+        #v-view-catalogo .cat-card .badge.novos{background:rgba(205,209,219,.14);color:var(--cat-gold);border:1px solid rgba(205,209,219,.3)}
+        #v-view-catalogo .cat-card .badge.paralelos{background:rgba(56,189,248,.14);color:var(--cat-blue);border:1px solid rgba(56,189,248,.3)}
+        #v-view-catalogo .cat-card .badge.recondicionados{background:rgba(34,197,94,.14);color:var(--cat-emerald);border:1px solid rgba(34,197,94,.3)}
+        #v-view-catalogo .cat-card h3{font-size:.95rem;font-weight:700;line-height:1.3;margin-bottom:7px}
+        #v-view-catalogo .cat-cod{font-size:.7rem;color:var(--cat-muted);letter-spacing:.5px;margin-bottom:12px}
+        #v-view-catalogo .cat-cod b{color:#a9aebe;font-weight:600}
+        #v-view-catalogo .cat-card-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+        #v-view-catalogo .cat-price{font-family:'Sora',sans-serif;font-weight:800;font-size:1.2rem;color:var(--cat-gold2);white-space:nowrap}
+        #v-view-catalogo .cat-price.clickable{cursor:pointer;border-bottom:1px dashed rgba(255,211,92,.5)}
+        #v-view-catalogo .cat-avail{font-size:.7rem;display:flex;align-items:center;gap:5px}
+        #v-view-catalogo .cat-avail.ok{color:var(--cat-emerald)}
+        #v-view-catalogo .cat-avail.no{color:var(--cat-muted)}
+        #v-view-catalogo .cat-dot{width:7px;height:7px;border-radius:50%}
+        #v-view-catalogo .cat-dot.ok{background:var(--cat-emerald)}
+        #v-view-catalogo .cat-dot.no{background:var(--cat-muted)}
+        #v-view-catalogo .cat-add{margin-top:12px;width:100%;padding:10px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:.82rem;display:flex;align-items:center;justify-content:center;gap:7px}
+        #v-view-catalogo .cat-add.on{background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));color:#160f00}
+        #v-view-catalogo .cat-add.off{background:var(--cat-panel2);color:var(--cat-muted);cursor:not-allowed}
+        #v-view-catalogo .cat-photo-area{position:relative;width:100%;height:140px;border-radius:11px;overflow:hidden;background:var(--cat-panel2);margin-bottom:10px;border:1px solid var(--cat-line);display:flex;align-items:center;justify-content:center}
+        #v-view-catalogo .cat-photo-area img{width:100%;height:100%;object-fit:cover}
+        #v-view-catalogo .cat-eye-btn{position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;z-index:2}
+        #v-view-catalogo .cat-ph-count{position:absolute;bottom:7px;left:7px;background:rgba(0,0,0,.6);color:#fff;font-size:.64rem;padding:2px 7px;border-radius:999px}
+        #v-view-catalogo .cat-card-admin{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:2}
+        #v-view-catalogo .cat-mini-btn{width:28px;height:28px;border-radius:8px;border:none;cursor:pointer;background:var(--cat-panel2);color:var(--cat-muted);font-size:.8rem}
+        #v-view-catalogo .cat-mini-btn.del:hover{color:var(--cat-red);background:rgba(239,68,68,.14)}
+        #v-view-catalogo .cat-modal{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+        #v-view-catalogo .cat-modal.open{display:flex}
+        #v-view-catalogo .cat-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(6px)}
+        #v-view-catalogo .cat-modal-card{position:relative;background:linear-gradient(180deg,#191d2b,#10131c);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:26px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:90vh;overflow:auto}
+        #v-view-catalogo .cat-modal-card.wide{max-width:560px}
+        #v-view-catalogo .cat-modal-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:9px;border:none;background:var(--cat-panel2);color:var(--cat-muted);cursor:pointer;font-size:1rem}
+        #v-view-catalogo .cat-modal-card h2{font-size:1.3rem;font-weight:800;margin-bottom:4px;color:var(--cat-text)}
+        #v-view-catalogo .cat-modal-card .sub{color:var(--cat-muted);font-size:.86rem;margin-bottom:18px}
+        #v-view-catalogo .cat-field{margin-bottom:13px}
+        #v-view-catalogo .cat-field label{display:block;font-size:.78rem;color:var(--cat-muted);margin-bottom:6px;letter-spacing:.3px}
+        #v-view-catalogo .cat-field input,#v-view-catalogo .cat-field select,#v-view-catalogo .cat-field textarea{width:100%;padding:11px 13px;border-radius:11px;background:var(--cat-panel);border:1px solid var(--cat-line);color:var(--cat-text);font-family:inherit;font-size:.9rem;outline:none}
+        #v-view-catalogo .cat-field textarea{resize:vertical;min-height:64px}
+        #v-view-catalogo .cat-field .hint{font-size:.68rem;color:var(--cat-muted);margin-top:4px}
+        #v-view-catalogo .cat-btn-main{width:100%;padding:12px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:.9rem;background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));color:#160f00}
+        #v-view-catalogo .cat-btn-sec{width:100%;padding:11px;border-radius:11px;border:1px solid var(--cat-line);cursor:pointer;font-family:inherit;font-weight:600;font-size:.86rem;background:var(--cat-panel);color:var(--cat-text);margin-top:9px}
+        #v-view-catalogo .cat-err{color:var(--cat-red);font-size:.8rem;text-align:center;margin-top:11px;display:none}
+        #v-view-catalogo .cat-row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+        #v-view-catalogo .cat-row{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+        #v-view-catalogo .cat-row input{flex:1;padding:9px 11px;border-radius:9px;background:var(--cat-panel);border:1px solid var(--cat-line);color:var(--cat-text);font-family:inherit;font-size:.86rem;outline:none}
+        #v-view-catalogo .cat-price-input{font-family:Sora;font-weight:800;font-size:1rem;color:#160f00;background:var(--cat-gold2);border:none;border-radius:7px;padding:3px 7px;width:105px;outline:none}
+        #v-view-catalogo .cat-photo-slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px}
+        #v-view-catalogo .cat-photo-slot{border:2px dashed var(--cat-line);border-radius:11px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative;background:var(--cat-panel);overflow:hidden;cursor:pointer}
+        #v-view-catalogo .cat-photo-slot img{width:calc(100% - 14px);height:calc(100% - 14px);object-fit:cover;border-radius:7px;position:absolute;top:7px;left:7px;z-index:1}
+        #v-view-catalogo .cat-photo-slot .ph-add-ico{color:var(--cat-muted);font-size:1.3rem}
+        #v-view-catalogo .cat-photo-slot .ph-label{font-size:.66rem;color:var(--cat-muted)}
+        #v-view-catalogo .cat-photo-slot .ph-remove{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:6px;border:none;background:rgba(239,68,68,.9);color:#fff;cursor:pointer;font-size:.66rem;display:none;z-index:3}
+        #v-view-catalogo .cat-photo-slot.has-img .ph-remove{display:grid;place-items:center}
+        #v-view-catalogo .cat-photo-slot.has-img .ph-add-ico,#v-view-catalogo .cat-photo-slot.has-img .ph-label{display:none}
+        #v-view-catalogo .cat-photo-slot input[type=file]{display:none}
+        #v-view-catalogo .cat-lightbox-content{position:relative;width:min(92vw,820px);max-height:92vh;display:flex;flex-direction:column;align-items:center}
+        #v-view-catalogo .cat-lightbox-content .stage{position:relative;width:100%;display:flex;align-items:center;justify-content:center}
+        #v-view-catalogo #catLbImg{max-width:100%;max-height:68vh;border-radius:13px}
+        #v-view-catalogo .cat-lb-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.6);border:1px solid var(--cat-line);color:#fff;font-size:1.6rem;cursor:pointer;z-index:2}
+        #v-view-catalogo .cat-lb-nav.prev{left:6px}
+        #v-view-catalogo .cat-lb-nav.next{right:6px}
+        #v-view-catalogo .cat-lb-counter{color:var(--cat-muted);font-size:.8rem;margin-top:10px}
+        #v-view-catalogo .cat-lb-thumbs{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+        #v-view-catalogo .cat-lb-thumb{width:52px;height:52px;border-radius:7px;overflow:hidden;cursor:pointer;border:2px solid transparent;opacity:.6;background:var(--cat-panel2)}
+        #v-view-catalogo .cat-lb-thumb.active{border-color:var(--cat-gold);opacity:1}
+        #v-view-catalogo .cat-lb-thumb img{width:100%;height:100%;object-fit:cover}
+        #v-view-catalogo .cat-fab{position:fixed;right:22px;bottom:22px;z-index:390;width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,var(--cat-gold),var(--cat-gold2));border:none;cursor:pointer;display:none;place-items:center;color:#160f00;font-size:1.6rem;box-shadow:0 12px 32px rgba(205,209,219,.35)}
+        #v-view-catalogo .cat-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(120px);z-index:600;background:#151926;border:1px solid var(--cat-line);border-left:4px solid var(--cat-gold);padding:12px 18px;border-radius:11px;font-size:.88rem;box-shadow:0 16px 40px rgba(0,0,0,.5);display:flex;align-items:center;gap:9px;max-width:92vw;transition:.35s}
+        #v-view-catalogo .cat-toast.show{transform:translateX(-50%) translateY(0)}
+        #v-view-catalogo .cat-toast.error{border-left-color:var(--cat-red)}
+        #v-view-catalogo .cat-toast.ok{border-left-color:var(--cat-emerald)}
+        #v-view-catalogo .cat-lock-ico{width:58px;height:58px;margin:0 auto 14px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(205,209,219,.15),rgba(205,209,219,.04));border:1px solid rgba(205,209,219,.28)}
+      </style>
+      <div class="v-view hidden" id="v-view-catalogo">
+        <div class="cat-bar">
+          <div class="cat-brand" id="catBrand" title="Clique 3x para abrir o painel">
+            <div class="cat-brand-ico">🚗</div>
+            <div>
+              <div class="cat-brand-name" id="catBrandName">Premium <span class="accent">Catalisadores</span></div>
+              <div class="cat-brand-tag" id="catBrandTag">Catálogo Oficial</div>
+            </div>
+          </div>
+          <div class="cat-search">
+            <input type="text" id="catSearch" placeholder="Buscar por modelo, marca ou código..." />
+            <button aria-label="Buscar" onclick="__cat_render()">🔍</button>
+          </div>
+          <div class="cat-header-actions">
+            <button class="cat-admin-btn" id="catAdminBtn" style="display:none" onclick="__cat_openAdmin()"><span>⚙️</span> Painel</button>
+            <button class="cat-logout-btn" id="catLogoutBtn" style="display:none" onclick="__cat_logout()">Sair</button>
+            <button class="cat-cart-btn" aria-label="Carrinho" onclick="__cat_addToCart(null, true)">🛒<span class="cat-cart-badge" id="catCartBadge">0</span></button>
+          </div>
+        </div>
+
+        <div class="cat-hero">
+          <span class="kicker">✦ Linha automotiva premium</span>
+          <h1 id="catHeroTitle">Catalisadores de alta <span class="accent">performance</span></h1>
+          <p id="catHeroSub">Encontre o catalisador certo para o seu veículo.</p>
+          <div class="cat-hero-stats">
+            <div class="cat-stat"><b id="catStatTotal">0</b><span>Produtos</span></div>
+            <div class="cat-stat"><b id="catStatNovos">0</b><span>Novos</span></div>
+            <div class="cat-stat"><b>+80</b><span>Modelos</span></div>
+          </div>
+        </div>
+
+        <div class="cat-filters" id="catFilters"></div>
+        <div class="cat-results" id="catResults"></div>
+        <div class="cat-grid" id="catGrid"></div>
+        <div style="text-align:center;padding:20px;color:var(--cat-muted);font-size:.8rem">© <span id="catFootYear"></span> <b id="catFootName" style="color:var(--cat-gold)">Premium Catalisadores</b> — Catálogo de catalisadores automotivos.</div>
+
+        <button class="cat-fab" id="catFab" onclick="__cat_openProduct(null)">+</button>
+
+        <!-- Login -->
+        <div class="cat-modal" id="catLoginModal">
+          <div class="cat-modal-bg" onclick="__cat_closeLogin()"></div>
+          <div class="cat-modal-card">
+            <button class="cat-modal-close" onclick="__cat_closeLogin()">✕</button>
+            <div class="cat-lock-ico">🔒</div>
+            <h2 style="text-align:center">Acesso Restrito</h2>
+            <p class="sub" style="text-align:center">Área exclusiva para administração do catálogo.</p>
+            <div class="cat-field"><label>Login</label><input type="text" id="catLoginUser" placeholder="Digite seu login" autocomplete="username"></div>
+            <div class="cat-field"><label>Senha</label><input type="password" id="catLoginPass" placeholder="Digite sua senha" autocomplete="current-password"></div>
+            <button class="cat-btn-main" onclick="__cat_doLogin()">Entrar</button>
+            <div class="cat-err" id="catLoginErr">Login ou senha incorretos.</div>
+          </div>
+        </div>
+
+        <!-- Admin -->
+        <div class="cat-modal" id="catAdminModal">
+          <div class="cat-modal-bg" onclick="__cat_closeAdmin()"></div>
+          <div class="cat-modal-card wide">
+            <button class="cat-modal-close" onclick="__cat_closeAdmin()">✕</button>
+            <h2>Painel de Administração</h2>
+            <p class="sub">Gerencie a identidade e o conteúdo do catálogo.</p>
+            <div class="cat-field"><label>Nome da loja</label><input type="text" id="catCfgNome"></div>
+            <div class="cat-field"><label>Tagline / subtítulo</label><input type="text" id="catCfgTag"></div>
+            <div class="cat-field"><label>Título do destaque (hero)</label><input type="text" id="catCfgTitulo"></div>
+            <div class="cat-field"><label>Descrição do destaque</label><textarea id="catCfgSub"></textarea></div>
+            <button class="cat-btn-main" type="button" onclick="__cat_saveConfig()">Salvar alterações (loja e categorias)</button>
+            <h4 style="font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--cat-gold);margin:18px 0 10px">Categorias</h4>
+            <div id="catCatList"></div>
+            <button class="cat-btn-sec" type="button" onclick="__cat_addCategoryRow()">+ Adicionar categoria</button>
+            <h4 style="font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--cat-gold);margin:18px 0 10px">Preços (ajuste geral)</h4>
+            <div class="cat-field">
+              <label>Porcentagem de aumento (%)</label>
+              <div style="display:flex;gap:10px"><input type="number" id="catCfgPerc" step="0.01" min="0" placeholder="Ex.: 10"><button class="cat-btn-main" type="button" onclick="__cat_aumentarPrecos()" style="flex:0 0 auto;width:auto;padding:0 20px">AUMENTAR %</button></div>
+              <button class="cat-btn-sec" type="button" onclick="__cat_voltarPrecos()">↩ VOLTAR VALOR ANTERIOR</button>
+            </div>
+            <h4 style="font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--cat-gold);margin:18px 0 10px">Produtos</h4>
+            <button class="cat-btn-main" onclick="__cat_closeAdmin();__cat_openProduct(null)">+ Adicionar novo produto</button>
+            <button class="cat-btn-sec" onclick="__cat_resetCatalog()">Restaurar catálogo padrão</button>
+          </div>
+        </div>
+
+        <!-- Produto -->
+        <div class="cat-modal" id="catProductModal">
+          <div class="cat-modal-bg" onclick="__cat_closeProduct()"></div>
+          <div class="cat-modal-card wide">
+            <button class="cat-modal-close" onclick="__cat_closeProduct()">✕</button>
+            <h2 id="catProdModalTitle">Novo produto</h2>
+            <p class="sub">Preencha os dados da peça.</p>
+            <input type="hidden" id="catProdId">
+            <div class="cat-field"><label>Nome / descrição do catalisador</label><input type="text" id="catProdNome" placeholder="Ex.: Catalisador Corsa Primário"></div>
+            <div class="cat-row2">
+              <div class="cat-field"><label>Cód. da peça</label><input type="text" id="catProdCod" placeholder="Ex.: CAT-1099"></div>
+              <div class="cat-field"><label>Preço (R$)</label><input type="number" id="catProdPreco" min="0" step="0.01" placeholder="0,00"></div>
+            </div>
+            <div class="cat-row2">
+              <div class="cat-field"><label>Categoria</label><select id="catProdCategoria"></select></div>
+              <div class="cat-field"><label>Disponibilidade</label><select id="catProdDisp"><option value="false">Indisponível</option><option value="true">Disponível</option></select></div>
+            </div>
+            <h4 style="font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--cat-gold);margin:14px 0 6px">Fotos do produto (até 3)</h4>
+            <p class="sub" style="font-size:.72rem;margin-bottom:6px">Clique em um quadro para enviar uma foto. As imagens são salvas na nuvem.</p>
+            <div class="cat-photo-slots" id="catPhotoSlots"></div>
+            <button class="cat-btn-main" id="catProdSaveBtn" onclick="__cat_saveProduct()">Salvar produto</button>
+            <button class="cat-btn-sec" onclick="__cat_closeProduct()">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- Lightbox -->
+        <div class="cat-modal" id="catLightboxModal">
+          <div class="cat-modal-bg" onclick="__cat_closeLightbox()"></div>
+          <div class="cat-lightbox-content">
+            <button class="cat-modal-close" onclick="__cat_closeLightbox()" style="position:absolute;top:8px;right:8px;z-index:5">✕</button>
+            <div class="stage">
+              <button class="cat-lb-nav prev" onclick="__cat_lbNav(-1)">‹</button>
+              <img id="catLbImg" alt="Foto do produto">
+              <button class="cat-lb-nav next" onclick="__cat_lbNav(1)">›</button>
+            </div>
+            <div class="cat-lb-counter" id="catLbCounter">1 / 1</div>
+            <div class="cat-lb-thumbs" id="catLbThumbs"></div>
+          </div>
+        </div>
+
+        <div class="cat-toast" id="catToast"><span id="catToastIcon">✓</span><span id="catToastMsg"></span></div>
       </div>
     </div>
     <div class="v-toast" id="v-toast"></div>
@@ -3535,6 +3778,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.auditLog) { try { window.auditLog('LOGIN', 'Entrou no sistema — ' + (acc.label || acc.type || '')); } catch(_){} }
     tryFullscreen(); armFullscreenFallback();
     if (window.updateCartUserInfo) window.updateCartUserInfo();
+    if (typeof window.__cat_syncAdmin === 'function') { try { window.__cat_syncAdmin(); } catch(_){} }
     const vav = document.getElementById('v-avatar');
     if (vav) vav.textContent = String(window.currentUserNome).substring(0,2).toUpperCase();
   }
@@ -3555,6 +3799,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('hidden'));
       ['btnSync','btnCota','btnExport','btnConfig'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
       window.currentUser = null; window.currentUserType = null; window.currentUserNome = null;
+      if (typeof window.__cat_syncAdmin === 'function') { try { window.__cat_syncAdmin(); } catch(_){} }
       overlay.classList.remove('hidden');
       setTimeout(() => { try { userInput.focus(); } catch(_){} }, 60);
     });
@@ -5608,6 +5853,43 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#v-total').value = fmtMoney(Math.max(0, v - d));
   }
 
+  // --- Autocomplete do catálogo no campo "Descrição do Produto" ---
+  window.__vendas_atualizarCatalogo = function(){};
+  const vProdInput = $('#v-produto');
+  const vSugBox = $('#v-catalogo-sugestoes');
+  if (vProdInput && vSugBox) {
+    vProdInput.addEventListener('input', function(){
+      const q = vProdInput.value.trim().toLowerCase();
+      if (!q){ vSugBox.style.display = 'none'; vSugBox.innerHTML = ''; return; }
+      const produtos = (typeof window.__cat_getProdutos === 'function') ? window.__cat_getProdutos() : [];
+      const matches = produtos.filter(function(p){
+        return String(p.nome||'').toLowerCase().indexOf(q) >= 0 || String(p.cod||'').toLowerCase().indexOf(q) >= 0;
+      });
+      if (!matches.length){ vSugBox.style.display = 'none'; vSugBox.innerHTML = ''; return; }
+      vSugBox.innerHTML = '';
+      matches.slice(0, 30).forEach(function(p){
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:9px 12px;cursor:pointer;font-size:13px;color:#16202c;border-bottom:1px solid #eef2f7;';
+        item.textContent = p.nome;
+        item.addEventListener('mouseenter', function(){ item.style.background = '#f4f6f9'; });
+        item.addEventListener('mouseleave', function(){ item.style.background = ''; });
+        item.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+        item.addEventListener('click', function(){
+          if ($('#v-produto')) $('#v-produto').value = p.nome || '';
+          if ($('#v-nossoCodigo')) $('#v-nossoCodigo').value = p.cod || '';
+          if ($('#v-valorUnit')) $('#v-valorUnit').value = fmtMoney(p.preco);
+          updateTotal();
+          vSugBox.style.display = 'none'; vSugBox.innerHTML = '';
+        });
+        vSugBox.appendChild(item);
+      });
+      vSugBox.style.display = 'block';
+    });
+    vProdInput.addEventListener('blur', function(){
+      setTimeout(function(){ if (vSugBox) vSugBox.style.display = 'none'; }, 180);
+    });
+  }
+
   const formEl = $('#v-order-form');
   if (formEl) {
     document.querySelectorAll('#v-order-form input[type="text"], #v-order-form textarea').forEach(el => {
@@ -5974,12 +6256,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const vh = $('#v-view-historico');
     const vc = $('#v-view-caixa');
     const ve = $('#v-view-estoque');
+    const vct = $('#v-view-catalogo');
     if (vv) vv.classList.toggle('hidden', t !== 'vendas');
     if (vp) vp.classList.toggle('hidden', t !== 'producao');
     if (vh) vh.classList.toggle('hidden', t !== 'historico');
     if (vc) vc.classList.toggle('hidden', t !== 'caixa');
     if (ve) ve.classList.toggle('hidden', t !== 'estoque');
+    if (vct) vct.classList.toggle('hidden', t !== 'catalogo');
     if (t === 'historico') renderHistorico();
+    if (t === 'catalogo') { if (window.__cat_render) { try { window.__cat_render(); } catch(e){} } }
   }));
 
   const histSearchEl = $('#v-hist-search');
@@ -6480,10 +6765,33 @@ document.addEventListener('DOMContentLoaded', () => {
     clearFormEstoque();
   }
 
+  function importCatalogEstoque(){
+    let produtos = [];
+    try { if (typeof window.__cat_getProdutos === 'function') produtos = window.__cat_getProdutos(); } catch(e){ produtos = []; }
+    if (!produtos.length){
+      if (window.__vendas_toast) window.__vendas_toast('Catálogo vazio ou ainda não carregado.', 'warn');
+      else alert('Catálogo vazio ou ainda não carregado.');
+      return;
+    }
+    let added = 0;
+    produtos.forEach(function(p){
+      const codigo = String(p.cod || '').trim();
+      if (!codigo) return;
+      const exists = estoque.some(function(r){ return String(r.codigo) === codigo; });
+      if (!exists){ estoque.push({ codigo: codigo, descricao: String(p.nome || ''), qtd: 0 }); added++; }
+    });
+    if (added){ saveEstoque(); renderEstoque(); }
+    const msg = added ? '✅ ' + added + ' produto(s) do catálogo importados para o estoque (qtd 0).' : 'Todos os produtos do catálogo já estão no estoque.';
+    if (window.__vendas_toast) window.__vendas_toast(msg, added ? 'success' : 'warn');
+    else alert(msg);
+  }
+
   function initEstoque(){
     if (!$('es-salvar')) return;
     $('es-salvar').addEventListener('click', salvarEstoque);
     $('es-cancel').addEventListener('click', clearFormEstoque);
+    const imp = $('es-import-catalogo');
+    if (imp) imp.addEventListener('click', importCatalogEstoque);
     clearFormEstoque();
     renderEstoque();
   }
@@ -6522,7 +6830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const idx = estoque.findIndex(r => String(r.codigo) === codigo);
     if (idx < 0) return false;
     estoque[idx].qtd -= qtd;
-    if (estoque[idx].qtd <= 0) estoque.splice(idx, 1);
+    if (estoque[idx].qtd < 0) estoque[idx].qtd = 0;
     saveEstoque();
     renderEstoque();
     return true;
@@ -6534,6 +6842,491 @@ document.addEventListener('DOMContentLoaded', () => {
     const idx = estoque.findIndex(r => String(r.codigo) === codigo);
     return idx >= 0 ? (parseInt(estoque[idx].qtd, 10) || 0) : 0;
   };
+})();
+</script>
+
+<script>
+(function catalogSystem(){
+  'use strict';
+  const STORE_KEY = 'catalisador_v1';
+  const CART_KEY = 'catalogo_cart_v1';
+  const ADMIN = { login: 'PROGRAMADOR', senha: '080888' };
+  const $id = id => document.getElementById(id);
+
+  function buildDefaultProducts(){
+    const raw = [
+      ["Catalisador Ecosport Secundário",600,"NOVOS",false],
+      ["Catalisador Novo Ecosport 1.5 1.6 16v Sigma 2014 2015 A 2018",650,"NOVOS",false],
+      ["Catalisador Fiat Toro Diesel",3000,"NOVOS",false],
+      ["Catalisador Ford Ka Primário",600,"NOVOS",true],
+      ["Catalisador Bmw X1 2.0 Turbo 2010 2011 2012 2013 2014 A 2018",1503.50,"NOVOS",false],
+      ["Catalisador Hyundai Hb20 1.0 2012-2018 Novo Inmetro",500,"NOVOS",false],
+      ["Catalisador Blazer Primário",500,"NOVOS",false],
+      ["Catalisador Wr-v Way Primário 2017 a 2022",700,"NOVOS",false],
+      ["Catalisador Ford Fusion 2.3 2.5 16v 2006 2007 2008 2009",900,"NOVOS",false],
+      ["Catalisador Bmw 320i 2.0 Aspirado Novo. Inmetro",1700,"NOVOS",false],
+      ["Catalisador Honda Civic 2000 A 2006 Novo Inmetro",650,"NOVOS",false],
+      ["Catalisador Blazer Secundário",500,"NOVOS",false],
+      ["Catalisador Cruze Primário",700,"NOVOS",false],
+      ["Catalisador Wevo Uno Mob Strada Fiorino Palio Doblo Idea Nov",530,"NOVOS",false],
+      ["Catalisador Captiva 3.0 v6 Secundário",800,"NOVOS",false],
+      ["Catalisador Toyota Etios E Yaris 1.3 1.5 2017 A 2021 Novo",582,"NOVOS",false],
+      ["Catalisador Motor Zeetec Rocam Ford Fiesta 1.6 2009 A 2013",550,"NOVOS",false],
+      ["Catalisador Elantra 2.0 16v 2013-2015 Novo Premium 2e480",1000,"NOVOS",false],
+      ["Catalisador Ford Courier 1.6 8v Zetec 2009 2010 2011 A 2013",600,"NOVOS",false],
+      ["Catalisador Novo Duplo Hilux / Sw4 2.7 16v 2009 A 2020 Flex",1500,"NOVOS",false],
+      ["Catalisador Citroen C3 AirCross Primário",700,"NOVOS",false],
+      ["Catalisador Fiat Linea 1.8 16v 2013 Motor Etorq Novo Inmetro",485,"NOVOS",false],
+      ["Catalisador Fiat Idea Strada 1.8 16v Motor Etorq 2011 A 2016",530,"NOVOS",false],
+      ["Cataisador Dodge Journey V6 3.6 Caaal 2011 2012 2013 A 2018",2550,"NOVOS",false],
+      ["Catalisador Bmw 320i 16v 2.0 X1 118i 120i 2010a 2014",1550,"NOVOS",false],
+      ["Catalisador Corsa Primário",500,"NOVOS",false],
+      ["Catalisador Mercedes Ml 350 6cc 2010",1800,"NOVOS",false],
+      ["Catalisador Honda Civic Primário 2008 a 2012",900,"NOVOS",false],
+      ["Catalisador Duplo Corola 1.8 2.0 2009 A 2014",950,"NOVOS",false],
+      ["Catalisador Bmw X3 G01 Xdrive 2.0",1700,"NOVOS",false],
+      ["Catalisador Dodje Journey 2.7 V6",900,"NOVOS",true],
+      ["Catalisador Fiat Cronos Argo 1.0 12v 3cc 2017 A 2023 Inmetro",550,"NOVOS",false],
+      ["Catalisador Novo Ford Ka Ecosport 1.5 3cc 2015-2021 Dragon",630,"NOVOS",false],
+      ["Catalisador L200 Triton Pajero Dakar 3.2 Diesel 2008 A 2016",700,"NOVOS",false],
+      ["Catalisador Vw Spacefox Voiage Savero Gol G5 G6 G7 G8 Novo",500,"NOVOS",false],
+      ["Catalisador Renault Sandero E Logan 1.0 2016-2021",600,"NOVOS",false],
+      ["Catalisador Novo Inmetro Toyota Etios 1.3 1.5 2012 A 2016",1000,"NOVOS",false],
+      ["Catalisador Hyundai Creta 1.6 16v 2017 2018 2019 2020",530,"NOVOS",false],
+      ["Catalisador Renaut Kwid 1.0 12v 3cc 2018 A 2023 Novo Inmetro",700,"NOVOS",false],
+      ["Catalisador Ford Focus 2.0 16v 2009 A 2014 C/flange(inmetro)",1000,"NOVOS",false],
+      ["Catalisador Celta Primário",500,"RECONDICIONADOS NOVOS",false],
+      ["Catalisador Bmw X4 Turbo 2.0 2010 2011 2012 2013 2014 A 2018",1600,"NOVOS",false],
+      ["Catalisador Astra 1999 - 2011",500,"NOVOS",false],
+      ["Catalisador Fiat Argo 2013 A 2023",700,"RECONDICIONADOS NOVOS",false],
+      ["Catalisador Wr-v Primário 2017 a 2022",700,"NOVOS",false],
+      ["Catalisador Ford Ecosport 1.6 8v Motor Zetec Rocam 1/sonda",550,"NOVOS",false],
+      ["Catalisador Mercedes Bens A W177 2020 A 2023 Novo Inmetro",3500,"NOVOS",false],
+      ["Catalisador Honda Fit 2009 a 2014 Primário",700,"NOVOS",false],
+      ["Catalisador Fiat Doblo Bravo 1.8 16v Etorq 2011 A 2018 Novo",520,"NOVOS",false],
+      ["Catalisador Hyundai Veloster 16v 1.6 2011 A2013 Nova Inmetro",530,"NOVOS",false],
+      ["Catalisador Cobalt Spin Onix Prisma 2012 - 2019 Novo Inmetro",500,"NOVOS",false],
+      ["Catalisador Par Amarok V6 3.0 2018 à 2023",2910,"NOVOS",false],
+      ["Catalisador New Fiesta Primário",600,"NOVOS",false],
+      ["Catalisador Bmw M5 F90 2017 - 2021",3880,"NOVOS",false],
+      ["Catalisador Duplo Ford Ranger V6 4.0 1993 A 1997",1455,"NOVOS",false],
+      ["Catalisador Tracker Sonic Cruze 1.8 16v 2012 A 2016 Novo",700,"NOVOS",false],
+      ["Catalisador Sprinter Diesel 2.2 Modelos 311 313 415 515 416",2700,"NOVOS",false],
+      ["Catalisador Mini Cooper E Bmw 220i 2.0 2015 2016 207 - 2019",1600,"NOVOS",false],
+      ["Catalisador Ranger 3.2 Diesel 2013 A 2016 Primário",1500,"NOVOS",false],
+      ["Catalisador Fiat Palio Weekend 1.6 16v Motor Etorq 2010-2016",510,"NOVOS",false],
+      ["Catalisador Kia Karens 2009 a 2012",800,"NOVOS",false],
+      ["Catalisador Toro Renegade Compass Diesel 2015- 2021 Novo",2425,"NOVOS",false],
+      ["Catalisador Renaut Clio 1.0 1.6 16v 1999 2000 2001 A 2016",550,"NOVOS",false],
+      ["Catalisador Mini Cooper 1.6 Turbo Thp",800,"NOVOS",false],
+      ["Catalisador Volkswagen Up 1.0 3cc 12v Aspirado 2015+",650,"NOVOS",false],
+      ["Catalisador Mitsubishi Pajero Tr4 2007 A 2015 Novo Inmetro",700,"NOVOS",false],
+      ["Catalisador C/flexivel Vwvirtus Golf Polo Tcros Nivus Tsi",970,"NOVOS",false],
+      ["Catalisador Mercedes C250 C200 C300 C180 2.0 2015-2018 Novo",1200,"NOVOS",false],
+      ["Catalisador Voyage Fox 1.6 2009 A 2016 Novo Inmetro.",700,"NOVOS",false],
+      ["Catalisador Citroen C4 Cactus 1.6",700,"NOVOS",false],
+      ["Catalisador Fiat Toro Diesel C/ Arla",3000,"NOVOS",false],
+      ["Catalisador Fiat Doblo",600,"NOVOS",true],
+      ["Catalisador Ecosport Primário",600,"NOVOS",false],
+      ["Catalisador Honda Fit 2003 a 2008",700,"NOVOS",false],
+      ["Catalisador Yaris 2019 a 2023",600,"NOVOS",false],
+      ["Catalisador Original Vw Jeta Passat Fusca Audi A3 Q3 2.0",1200,"NOVOS",false],
+      ["Catalisador Captiva 3.0 V6",800,"NOVOS",true],
+      ["Catalisador Renault Master 2.3 217 A 2021 C/2 Furos /c418",2425,"NOVOS",false],
+      ["Catalizador Traseiro Dodge Journey 2.7 2007 A 2010 Novo",1500,"NOVOS",false],
+      ["Catalisador Golf Tsi 1.4 Turbo 2013 A 2018 Novo Inmetro",1050,"NOVOS",false],
+      ["Catalisador Cruze Turbo 1.4 2017 A 2022 Novo Inmetro",900,"NOVOS",false],
+      ["Produto padrão",1,"PARALELOS",true],
+      ["Catalisador Hyundai Hb20 1.6 2012-2019 Novo",550,"NOVOS",false],
+      ["Catalisador Amarok Monoturbo Apartir De 2013",1900,"NOVOS",false],
+      ["Catalisador Bmw 320i 16v 2.0 Turbo 2014 2015 2016 2017 2018",1649,"NOVOS",false],
+      ["Catalisador Secundaria Jac T40 1.6 At 2020 Novo Premium",750,"NOVOS",false],
+      ["Catalisador Foton Diesel Novo Inmetro",2000,"NOVOS",false],
+      ["Catalisador Sonic Primário",700,"NOVOS",false],
+      ["Catalisador Peugeot 208 1.0 3c 2021 A 2023 Novo Inmetro",600,"NOVOS",false],
+      ["Catalisador Honda Fit 2015 em Diante",700,"NOVOS",false],
+      ["Catalisador Novo Veloster Hb20 Kia Soul Creta Cerato 1.6",520,"NOVOS",false],
+      ["Catalisador Diantero Dodge Journey2.7 V6 2007 A 2010 Novo",1500,"NOVOS",false],
+      ["Catalisador Rampage Toro Comander Compass Diesel 2020- 2024",3100,"NOVOS",false],
+      ["Catalisador Peugeot 208 Primário",700,"NOVOS",false],
+      ["Catalisador Honda Hr-v 2015 à 2018",900,"NOVOS",false],
+      ["Catalisador Peugeot Citroen 308 408 2008 3008 Thp Turbo",800,"NOVOS",false],
+      ["Catalisador Chery Tiggo 5x 1.5 Turbo Original 2018 A 2022",900,"NOVOS",false],
+      ["Catalisador Ford Ranger 2.2 4x4 Diesel 2018 A 2023 Nova",2716,"NOVOS",false],
+      ["Catalisador New Fiesta Ka Eco Sport 1.5 2013 A 2018",700,"NOVOS",false],
+      ["Catalisador Agile Primário",500,"NOVOS",false],
+      ["Catalisador Polo Track 1.0 12v 2023 2024 2025",1300,"NOVOS",false],
+      ["Catalisador Suzuki Grand Vitara 2.0 16v 2009 A 2019",1000,"NOVOS",false],
+      ["Catalisador Sprinter 2.0 2022- 2026 Om 654 Arla Nova Inmetr0",4880,"NOVOS",false],
+      ["Catalisador Novo Inmetro Ecosport 2.0 16v 4x2 2013 A 2020",1600,"NOVOS",false],
+      ["Catalisador New Fiesta Secundário",600,"NOVOS",false],
+      ["Catalisador Grand Siena 1.8 16v Motor Etorq 2011 A 2021 Novo",510,"NOVOS",false],
+      ["Catalisador Novo Hilux 2.8 204 Cv 2021 A 2024 Srx Srv Sw4",2619,"NOVOS",false]
+    ];
+    return raw.map(function(r, i){
+      return { id: 'p' + (i + 1), nome: r[0], preco: r[1], categoria: r[2], disponivel: r[3], fotos: [], cod: 'CAT-' + String(1000 + i + 1) };
+    });
+  }
+
+  function defaultState(){
+    return {
+      nome: 'Premium Catalisadores',
+      tagline: 'Catálogo Oficial',
+      hero: 'Catalisadores de alta performance e qualidade original',
+      heroSub: 'Encontre o catalisador certo para o seu veículo. Peças novas, paralelas e recondicionadas com garantia e procedência.',
+      produtos: buildDefaultProducts(),
+      categorias: ['NOVOS', 'PARALELOS', 'RECONDICIONADOS NOVOS']
+    };
+  }
+
+  let state = null;
+  let activeCategory = 'TODOS';
+  let isAdmin = false;
+  let workingCats = [];
+  let pendingFotos = [];
+  let lbPhotos = [], lbIndex = 0;
+  let toastTimer = null;
+  let clickTimes = [];
+  let cartCount = parseInt(localStorage.getItem(CART_KEY) || '0', 10) || 0;
+
+  function loadState(){ try { const s = localStorage.getItem(STORE_KEY); if (s){ state = JSON.parse(s); if (!state.categorias || !state.categorias.length) state.categorias = ['NOVOS','PARALELOS','RECONDICIONADOS NOVOS']; state.produtos = state.produtos || []; state.produtos.forEach(function(p){ if (!p.fotos) p.fotos = []; }); return; } } catch(e){} state = defaultState(); saveState(); }
+  function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){} try { if (typeof window.__vendas_atualizarCatalogo === 'function') window.__vendas_atualizarCatalogo(); } catch(e){} }
+
+  const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function catClass(c){ c=(c||'').toUpperCase(); if(c.indexOf('PARALEL')>=0) return 'paralelos'; if(c.indexOf('RECONDICION')>=0) return 'recondicionados'; return 'novos'; }
+  function highlightAccent(t){ return esc(t).replace(/\b(performance|original|qualidade|alta)\b/gi, '<span class="accent">$1</span>'); }
+
+  function buildFilters(){
+    const cats = ['TODOS'].concat(state.categorias || []);
+    const el = $id('catFilters'); if(!el) return;
+    el.innerHTML = '';
+    cats.forEach(function(c){
+      const count = c==='TODOS' ? state.produtos.length : state.produtos.filter(function(p){ return p.categoria===c; }).length;
+      const b = document.createElement('button');
+      b.className = 'cat-fbtn' + (activeCategory===c ? ' active' : '');
+      b.innerHTML = c + ' <span class="cnt">' + count + '</span>';
+      b.onclick = function(){ activeCategory = c; render(); };
+      el.appendChild(b);
+    });
+  }
+
+  function render(){
+    const q = ($id('catSearch') ? $id('catSearch').value : '').trim().toLowerCase();
+    let list = state.produtos.slice();
+    if(activeCategory !== 'TODOS'){ list = list.filter(function(p){ return p.categoria===activeCategory; }); }
+    if(q){ list = list.filter(function(p){ return (p.nome+' '+p.cod+' '+p.categoria).toLowerCase().indexOf(q) >= 0; }); }
+
+    if($id('catBrandName')) $id('catBrandName').innerHTML = state.nome.replace(/\b(Catalisadores)\b/gi, '<span class="accent">$1</span>');
+    if($id('catBrandTag')) $id('catBrandTag').textContent = state.tagline;
+    if($id('catHeroTitle')) $id('catHeroTitle').innerHTML = highlightAccent(state.hero);
+    if($id('catHeroSub')) $id('catHeroSub').textContent = state.heroSub;
+    if($id('catFootName')) $id('catFootName').textContent = state.nome;
+    if($id('catStatTotal')) $id('catStatTotal').textContent = state.produtos.length;
+    if($id('catStatNovos')) $id('catStatNovos').textContent = state.produtos.filter(function(p){return p.categoria==='NOVOS';}).length;
+
+    if($id('catResults')){ const lbl = activeCategory==='TODOS' ? 'Todos os produtos' : activeCategory; $id('catResults').textContent = list.length + ' produto(s) em "' + lbl + '"' + (q ? ' · busca: "' + q + '"' : ''); }
+
+    const grid = $id('catGrid'); if(!grid) return;
+    grid.innerHTML = '';
+    list.forEach(function(p){
+      const card = document.createElement('article');
+      card.className = 'cat-card';
+      const photos = (p.fotos && p.fotos.length) ? p.fotos : [];
+      card.innerHTML =
+        (photos.length ? '<div class="cat-photo-area"><img src="' + esc(photos[0]) + '" alt="' + esc(p.nome) + '"><button class="cat-eye-btn" title="Ver fotos" onclick="__cat_openLightbox(\'' + esc(p.id) + '\')">👁</button><span class="cat-ph-count">📷 ' + photos.length + '</span></div>' : '') +
+        (isAdmin ? '<div class="cat-card-admin"><button class="cat-mini-btn" title="Editar" onclick="__cat_openProduct(\'' + esc(p.id) + '\')">✎</button><button class="cat-mini-btn del" title="Excluir" onclick="__cat_delProduct(\'' + esc(p.id) + '\')">🗑</button></div>' : '') +
+        '<span class="cat-badge badge ' + catClass(p.categoria) + '">' + esc(p.categoria) + '</span>' +
+        '<h3>' + esc(p.nome) + '</h3>' +
+        '<div class="cat-cod">▦ Cód.: <b>' + esc(p.cod) + '</b></div>' +
+        '<div class="cat-card-foot"><span class="cat-price' + (isAdmin ? ' clickable' : '') + '"' + (isAdmin ? ' title="Clique para editar" onclick="__cat_inlineEditPrice(event, \'' + esc(p.id) + '\')"' : '') + '>' + fmt.format(p.preco) + '</span><span class="cat-avail ' + (p.disponivel?'ok':'no') + '"><span class="cat-dot ' + (p.disponivel?'ok':'no') + '"></span>' + (p.disponivel?'Disponível':'Indisponível') + '</span></div>' +
+        (p.disponivel ? '<button class="cat-add on" onclick="__cat_addToCart(\'' + esc(p.id) + '\')">🛒 ADICIONAR</button>' : '<button class="cat-add off" disabled>🛒 ADICIONAR</button>');
+      grid.appendChild(card);
+    });
+    if(list.length === 0){ grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--cat-muted)">Nenhum produto encontrado.</div>'; }
+    buildFilters();
+  }
+
+  function showToast(msg, type){
+    const t = $id('catToast'); if(!t) return;
+    $id('catToastMsg').textContent = msg;
+    $id('catToastIcon').textContent = type==='error' ? '✕' : (type==='ok' ? '✓' : 'ℹ');
+    t.className = 'cat-toast show ' + (type||'');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.className = 'cat-toast ' + (type||''); }, 2600);
+  }
+
+  function updateAdminUI(){
+    if($id('catAdminBtn')) $id('catAdminBtn').style.display = isAdmin ? 'flex' : 'none';
+    if($id('catLogoutBtn')) $id('catLogoutBtn').style.display = isAdmin ? 'flex' : 'none';
+    if($id('catFab')) $id('catFab').style.display = isAdmin ? 'grid' : 'none';
+  }
+
+  /* ------ admin vinculado ao login principal (sem triplo clique) ------ */
+  function isAdminUser(){
+    if (window.currentUser === 'PROGRAMADOR') return true;
+    return String(window.currentUserType || '').toUpperCase() === 'ADM';
+  }
+  function syncAdmin(){
+    const next = isAdminUser();
+    const changed = next !== isAdmin;
+    isAdmin = next;
+    updateAdminUI();
+    if (changed) render();
+  }
+  window.__cat_syncAdmin = syncAdmin;
+
+  function openLogin(){ $id('catLoginErr').style.display='none'; $id('catLoginUser').value=''; $id('catLoginPass').value=''; $id('catLoginModal').classList.add('open'); try{$id('catLoginUser').focus();}catch(e){} }
+  function closeLogin(){ $id('catLoginModal').classList.remove('open'); }
+  function doLogin(){
+    const u = $id('catLoginUser').value.trim(); const p = $id('catLoginPass').value;
+    if(u.toUpperCase() === ADMIN.login && p === ADMIN.senha){ isAdmin = true; closeLogin(); updateAdminUI(); showToast('Bem-vindo, Programador! Modo edição ativado.', 'ok'); render(); }
+    else { $id('catLoginErr').style.display = 'block'; }
+  }
+  function logout(){
+    const b = document.getElementById('btnLogout');
+    if (b){ b.click(); return; }
+    isAdmin = false; updateAdminUI(); render(); showToast('Modo edição desativado.', '');
+  }
+
+  /* ------ modal admin ------ */
+  function openAdmin(){
+    $id('catCfgNome').value = state.nome; $id('catCfgTag').value = state.tagline;
+    $id('catCfgTitulo').value = state.hero.replace(/<[^>]+>/g,''); $id('catCfgSub').value = state.heroSub;
+    workingCats = state.categorias.slice(); renderCategoryRows(); $id('catAdminModal').classList.add('open');
+  }
+  function closeAdmin(){ $id('catAdminModal').classList.remove('open'); }
+  function saveConfig(){
+    state.nome = $id('catCfgNome').value.trim() || state.nome;
+    state.tagline = $id('catCfgTag').value.trim() || state.tagline;
+    state.hero = $id('catCfgTitulo').value.trim() || state.hero;
+    state.heroSub = $id('catCfgSub').value.trim() || state.heroSub;
+    saveCategories(); saveState(); closeAdmin(); render(); showToast('Configurações salvas com sucesso!', 'ok');
+  }
+  function aumentarPrecos(){
+    const perc = parseFloat($id('catCfgPerc').value);
+    if(isNaN(perc)){ showToast('Informe uma porcentagem válida.', 'error'); return; }
+    if(perc <= 0){ showToast('Informe uma porcentagem maior que zero.', 'error'); return; }
+    const backup = state.produtos.map(function(p){ return [p.id, p.preco]; });
+    try { localStorage.setItem('catalogo_backup_precos', JSON.stringify(backup)); } catch(e){}
+    const fator = 1 + perc/100;
+    state.produtos.forEach(function(p){ p.preco = Math.round(p.preco*fator*100)/100; });
+    saveState(); render(); $id('catCfgPerc').value = '';
+    showToast('Catálogo inteiro aumentado em ' + perc + '%!', 'ok');
+  }
+  function voltarPrecos(){
+    let backup = null; try{ backup = JSON.parse(localStorage.getItem('catalogo_backup_precos')); }catch(e){}
+    if(!backup || !backup.length){ showToast('Não há valor anterior salvo.', 'error'); return; }
+    let restaurados = 0;
+    backup.forEach(function(item){ const p = state.produtos.find(function(x){ return x.id===item[0]; }); if(p){ p.preco = item[1]; restaurados++; } });
+    saveState(); render(); try{ localStorage.removeItem('catalogo_backup_precos'); }catch(e){}
+    showToast('Valores anteriores restaurados (' + restaurados + ' produtos)!', 'ok');
+  }
+  function resetCatalog(){
+    if(!confirm('Restaurar o catálogo para o padrão original? Suas alterações serão perdidas.')) return;
+    state = defaultState(); saveState(); render(); showToast('Catálogo restaurado.', 'ok');
+  }
+
+  /* ------ categorias ------ */
+  function renderCategoryRows(){
+    const el = $id('catCatList'); if(!el) return; el.innerHTML = '';
+    workingCats.forEach(function(c, i){
+      const row = document.createElement('div'); row.className = 'cat-row';
+      row.innerHTML = '<input type="text" class="cat-input" placeholder="Nome da categoria" value="' + esc(c) + '" data-idx="' + i + '"><button type="button" class="cat-mini-btn del" onclick="__cat_delCategoryRow(' + i + ')">🗑</button>';
+      el.appendChild(row);
+    });
+  }
+  function captureCats(){ document.querySelectorAll('#v-view-catalogo .cat-input').forEach(function(inp){ workingCats[parseInt(inp.dataset.idx,10)] = inp.value.trim(); }); }
+  function addCategoryRow(){ captureCats(); workingCats.push(''); renderCategoryRows(); }
+  function delCategoryRow(i){ captureCats(); workingCats.splice(i,1); renderCategoryRows(); }
+  function saveCategories(){
+    captureCats(); const oldCats = state.categorias.slice(); const unique = [];
+    workingCats.forEach(function(c){ if(c && unique.indexOf(c) < 0) unique.push(c); });
+    if(unique.length===0) unique.push('NOVOS');
+    const map = {}; oldCats.forEach(function(oldName, i){ if(unique[i]!==undefined && unique[i]!==oldName) map[oldName]=unique[i]; });
+    state.produtos.forEach(function(p){ if(map[p.categoria]) p.categoria = map[p.categoria]; if(unique.indexOf(p.categoria) < 0) p.categoria = unique[0]; });
+    state.categorias = unique;
+  }
+
+  /* ------ produto ------ */
+  function populateCategorySelect(selected){
+    const sel = $id('catProdCategoria'); if(!sel) return; sel.innerHTML = '';
+    (state.categorias && state.categorias.length ? state.categorias : ['NOVOS']).forEach(function(c){ const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+    if(selected) sel.value = selected;
+  }
+  function openProduct(id){
+    $id('catProdId').value = id || '';
+    $id('catProdModalTitle').textContent = id ? 'Editar produto' : 'Novo produto';
+    const p = id ? state.produtos.find(function(x){ return x.id===id; }) : null;
+    $id('catProdNome').value = p ? p.nome : '';
+    $id('catProdCod').value = p ? p.cod : '';
+    $id('catProdPreco').value = p ? p.preco : '';
+    populateCategorySelect(p ? p.categoria : ((state.categorias && state.categorias[0]) || 'NOVOS'));
+    $id('catProdDisp').value = p ? String(p.disponivel) : 'false';
+    pendingFotos = (p && p.fotos) ? p.fotos.slice() : [];
+    renderPhotoSlots(); $id('catProductModal').classList.add('open');
+  }
+  function closeProduct(){ $id('catProductModal').classList.remove('open'); }
+  function saveProduct(){
+    const id = $id('catProdId').value;
+    const nome = $id('catProdNome').value.trim();
+    const cod = $id('catProdCod').value.trim() || ('CAT-' + (1000 + state.produtos.length + 1 + Math.floor(Math.random()*10)));
+    const preco = parseFloat($id('catProdPreco').value) || 0;
+    const categoria = $id('catProdCategoria').value;
+    const disponivel = $id('catProdDisp').value === 'true';
+    if(!nome){ showToast('Informe o nome do catalisador.', 'error'); return; }
+    if(id){ const p = state.produtos.find(function(x){ return x.id===id; }); if(p){ p.nome=nome; p.cod=cod; p.preco=preco; p.categoria=categoria; p.disponivel=disponivel; p.fotos=pendingFotos.filter(Boolean).slice(0,3); } }
+    else { state.produtos.unshift({ id:'p'+Date.now(), nome:nome, cod:cod, preco:preco, categoria:categoria, disponivel:disponivel, fotos:pendingFotos.filter(Boolean).slice(0,3) }); }
+    saveState(); closeProduct(); render(); showToast('Produto salvo com sucesso!', 'ok');
+  }
+  function delProduct(id){
+    if(!confirm('Excluir este produto?')) return;
+    state.produtos = state.produtos.filter(function(x){ return x.id!==id; });
+    saveState(); render(); showToast('Produto removido.', '');
+  }
+  function inlineEditPrice(e, id){
+    if(e && e.stopPropagation) e.stopPropagation();
+    const span = (e && e.currentTarget) ? e.currentTarget : null; if(!span) return;
+    const p = state.produtos.find(function(x){ return x.id===id; }); if(!p) return;
+    const input = document.createElement('input'); input.type='number'; input.step='0.01'; input.value=p.preco; input.className='cat-price-input';
+    span.replaceWith(input); input.focus(); input.select();
+    function commit(){ const val = parseFloat(input.value); if(!isNaN(val)){ p.preco=val; saveState(); } render(); }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function(ev){ if(ev.key==='Enter') commit(); else if(ev.key==='Escape') render(); });
+  }
+
+  /* ------ fotos (com upload para o Firebase Storage) ------ */
+  function compressImage(file, cb){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const img = new Image();
+      img.onload = function(){
+        const max = 900; let w = img.width, h = img.height; const s = Math.min(1, max/Math.max(w,h));
+        w = Math.round(w*s); h = Math.round(h*s);
+        const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = function(){ cb(null); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function setPhotoFromFile(file, idx){
+    compressImage(file, function(dataUrl){
+      if(!dataUrl){ showToast('Não foi possível processar a foto.', 'error'); return; }
+      pendingFotos[idx] = '__uploading__';
+      renderPhotoSlots();
+      if(typeof window.__fbUploadImage === 'function' && window.__fbReady){
+        window.__fbUploadImage(dataUrl, 'catalogo').then(function(up){
+          if(up && up.ok){ pendingFotos[idx] = up.url; }
+          else { pendingFotos[idx] = dataUrl; }
+          renderPhotoSlots();
+          showToast(up && up.ok ? 'Foto salva na nuvem.' : 'Foto salva localmente.', up && up.ok ? 'ok' : '');
+        }).catch(function(){ pendingFotos[idx] = dataUrl; renderPhotoSlots(); });
+      } else {
+        pendingFotos[idx] = dataUrl;
+        renderPhotoSlots();
+      }
+    });
+  }
+  function renderPhotoSlots(){
+    const el = $id('catPhotoSlots'); if(!el) return; el.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const f = pendingFotos[i];
+      const slot = document.createElement('div');
+      const uploading = f === '__uploading__';
+      slot.className = 'cat-photo-slot' + (f && !uploading ? ' has-img' : '');
+      slot.innerHTML =
+        (f && !uploading ? '<img src="' + esc(f) + '" alt="Foto ' + (i+1) + '">' : '') +
+        (uploading ? '<span class="ph-add-ico">⏳</span><span class="ph-label">Enviando...</span>' :
+          '<span class="ph-add-ico">📷</span><span class="ph-label">' + (f ? 'Trocar foto ' + (i+1) : 'Foto ' + (i+1)) + '</span>') +
+        (f && !uploading ? '<button type="button" class="ph-remove" onclick="__cat_removePhoto(' + i + ')">✕</button>' : '') +
+        '<input type="file" accept="image/*" data-idx="' + i + '">';
+      slot.addEventListener('click', function(ev){
+        if(ev.target.classList && ev.target.classList.contains('ph-remove')) return;
+        const inp = slot.querySelector('input[type=file]'); if(inp) inp.click();
+      });
+      el.appendChild(slot);
+    }
+    el.querySelectorAll('input[type=file]').forEach(function(inp){
+      inp.addEventListener('change', function(){ const idx = parseInt(inp.dataset.idx,10); const file = inp.files && inp.files[0]; if(file) setPhotoFromFile(file, idx); });
+    });
+  }
+  function removePhoto(i){
+    pendingFotos[i] = undefined;
+    pendingFotos = pendingFotos.filter(Boolean);
+    renderPhotoSlots();
+  }
+
+  /* ------ lightbox ------ */
+  function openLightbox(id){
+    const p = state.produtos.find(function(x){ return x.id===id; });
+    if(!p || !p.fotos || !p.fotos.length) return;
+    lbPhotos = p.fotos; lbIndex = 0; renderLightbox(); $id('catLightboxModal').classList.add('open');
+  }
+  function closeLightbox(){ $id('catLightboxModal').classList.remove('open'); }
+  function renderLightbox(){
+    $id('catLbImg').src = lbPhotos[lbIndex];
+    $id('catLbCounter').textContent = (lbIndex+1) + ' / ' + lbPhotos.length;
+    const thumbs = $id('catLbThumbs'); thumbs.innerHTML = '';
+    lbPhotos.forEach(function(f, i){
+      const t = document.createElement('div'); t.className = 'cat-lb-thumb' + (i===lbIndex?' active':'');
+      t.innerHTML = '<img src="' + esc(f) + '" alt="">';
+      t.onclick = function(){ lbIndex = i; renderLightbox(); };
+      thumbs.appendChild(t);
+    });
+  }
+  function lbNav(dir){ lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length; renderLightbox(); }
+
+  /* ------ carrinho (demonstrativo) ------ */
+  function addToCart(id, justFlash){
+    if(justFlash){ showToast('Carrinho com ' + cartCount + ' item(ns).', ''); return; }
+    cartCount++; try { localStorage.setItem(CART_KEY, String(cartCount)); } catch(e){}
+    const b = $id('catCartBadge'); if(b){ b.textContent = cartCount; }
+    const p = state.produtos.find(function(x){ return x.id===id; });
+    showToast((p ? p.nome : 'Item') + ' adicionado ao carrinho!', 'ok');
+  }
+
+  /* ------ exposição global ------ */
+  window.__cat_render = render;
+  window.__cat_getProdutos = function(){ return (state && state.produtos) ? state.produtos.slice() : []; };
+  window.__cat_openLightbox = openLightbox;
+  window.__cat_closeLightbox = closeLightbox;
+  window.__cat_lbNav = lbNav;
+  window.__cat_addToCart = addToCart;
+  window.__cat_openProduct = openProduct;
+  window.__cat_delProduct = delProduct;
+  window.__cat_openLogin = openLogin;
+  window.__cat_closeLogin = closeLogin;
+  window.__cat_doLogin = doLogin;
+  window.__cat_logout = logout;
+  window.__cat_openAdmin = openAdmin;
+  window.__cat_closeAdmin = closeAdmin;
+  window.__cat_saveConfig = saveConfig;
+  window.__cat_addCategoryRow = addCategoryRow;
+  window.__cat_delCategoryRow = delCategoryRow;
+  window.__cat_aumentarPrecos = aumentarPrecos;
+  window.__cat_voltarPrecos = voltarPrecos;
+  window.__cat_resetCatalog = resetCatalog;
+  window.__cat_saveProduct = saveProduct;
+  window.__cat_closeProduct = closeProduct;
+  window.__cat_inlineEditPrice = inlineEditPrice;
+  window.__cat_removePhoto = removePhoto;
+
+  /* ------ bindings ------ (admin: sem triplo clique; ligado ao login principal) ------ */
+  const searchEl = $id('catSearch');
+  if(searchEl) searchEl.addEventListener('input', function(){ activeCategory = 'TODOS'; render(); });
+  const lu = $id('catLoginUser'); if(lu) lu.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  const lp = $id('catLoginPass'); if(lp) lp.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+  /* ------ init ------ */
+  loadState();
+  const cb = $id('catCartBadge'); if(cb) cb.textContent = cartCount;
+  const fy = $id('catFootYear'); if(fy) fy.textContent = new Date().getFullYear();
+  syncAdmin();
+  render();
+  try { if (typeof window.__vendas_atualizarCatalogo === 'function') window.__vendas_atualizarCatalogo(); } catch(e){}
 })();
 </script>
 
