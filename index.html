@@ -1681,6 +1681,7 @@ setTimeout(restoreOnce, 1100);
           <label><input type="checkbox" data-perm="premium_producao"> Premium - Produção</label>
           <label><input type="checkbox" data-perm="premium_historico"> Premium - Histórico</label>
           <label><input type="checkbox" data-perm="premium_catalogo"> Premium - Catálogo</label>
+          <label><input type="checkbox" data-perm="premium_caixa"> Premium - Fluxo de Caixa</label>
           <label><input type="checkbox" data-perm="dados_cliente_carrinho"> Dados do Cliente (Carrinho)</label>
         </div>
       </div>
@@ -3614,7 +3615,7 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
   const LS_KEY_USERS = 'paizao_usuarios';
   const ALL_TABS = ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas'];
-  const EXTRA_PERMS = ['dados_cliente_carrinho', 'premium_vendas', 'premium_producao', 'premium_historico', 'premium_catalogo'];
+  const EXTRA_PERMS = ['dados_cliente_carrinho', 'premium_vendas', 'premium_producao', 'premium_historico', 'premium_catalogo', 'premium_caixa'];
   const DEFAULT_EVERTON = { pass: '986533990', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Everton' };
   const DEFAULT_PROG = { pass: '080888', role: 'total', type: 'ADM', label: 'Acesso Total', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Programador' };
   let USERS = {};
@@ -3696,6 +3697,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       localStorage.setItem(MIGRATED_CATALOGO, '1');
+    }
+    const MIGRATED_CAIXA = 'paizao_migrated_caixa_perm_v1';
+    if (localStorage.getItem(MIGRATED_CAIXA) !== '1') {
+      for (const k in USERS) {
+        const u = USERS[k];
+        if (u && u.type === 'ADM' && Array.isArray(u.permissions)) {
+          if (!u.permissions.includes('premium_caixa')) u.permissions.push('premium_caixa');
+          seededUsers = true;
+        }
+      }
+      localStorage.setItem(MIGRATED_CAIXA, '1');
     }
   } catch(_){}
   for(const k in USERS){
@@ -4316,7 +4328,7 @@ document.addEventListener('DOMContentLoaded', () => {
   usrTipo.addEventListener('change', () => {
     const t = usrTipo.value;
     const defaults = {
-      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas','dados_cliente_carrinho','premium_vendas','premium_producao','premium_historico','premium_catalogo'],
+      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas','dados_cliente_carrinho','premium_vendas','premium_producao','premium_historico','premium_catalogo','premium_caixa'],
       COMPRADOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
       AGREGADO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
       AGREGADO2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
@@ -6474,21 +6486,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let showProducao = perms.includes('premium_producao');
     let showHistorico = perms.includes('premium_historico');
     let showCatalogo = perms.includes('premium_catalogo');
+    let showCaixa = perms.includes('premium_caixa');
 
     if (isAdm && !showVendas && !showProducao && !showHistorico) {
       showVendas = showProducao = showHistorico = true;
     }
     if (isAdm) showCatalogo = true;
+    if (isAdm) showCaixa = true;
 
     const tabVendas = document.querySelector('.v-tab[data-vtab="vendas"]');
     const tabProducao = document.querySelector('.v-tab[data-vtab="producao"]');
     const tabHistorico = document.querySelector('.v-tab[data-vtab="historico"]');
     const tabCatalogo = document.querySelector('.v-tab[data-vtab="catalogo"]');
+    const tabCaixa = document.querySelector('.v-tab[data-vtab="caixa"]');
 
     if (tabVendas) tabVendas.style.display = showVendas ? 'flex' : 'none';
     if (tabProducao) tabProducao.style.display = showProducao ? 'flex' : 'none';
     if (tabHistorico) tabHistorico.style.display = showHistorico ? 'flex' : 'none';
     if (tabCatalogo) tabCatalogo.style.display = showCatalogo ? 'flex' : 'none';
+    if (tabCaixa) tabCaixa.style.display = showCaixa ? 'flex' : 'none';
 
     const activeTab = document.querySelector('.v-tab.active');
     if (activeTab && activeTab.style.display === 'none') {
