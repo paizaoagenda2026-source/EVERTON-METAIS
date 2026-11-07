@@ -6072,34 +6072,41 @@ document.addEventListener('DOMContentLoaded', () => {
         toast('Pedido ' + id + ' encaminhado para produção!', 'success');
         loadedOrderId = null;
       } else {
-        // Determina a chave (referência/código) da peça para checagem de estoque
+        // Determina as chaves candidatas (referência/código) da peça para checagem de estoque
         let ordemIdx = -1;
         if (loadedOrderId) ordemIdx = db.orders.findIndex(x => x.id === loadedOrderId);
 
-        let codigo = '';
+        const candKeys = [];
+        const addKey = (v) => { const s = String(v==null?'':v).trim(); if (s && candKeys.indexOf(s) < 0) candKeys.push(s); };
+
         if (ordemIdx !== -1) {
           const o = db.orders[ordemIdx];
-          codigo = (o.referencia || o.nossoCodigo || o.codOriginal || o.produto || '').toString().trim();
+          addKey(o.referencia); addKey(o.nossoCodigo); addKey(o.codOriginal); addKey(o.produto);
         }
-        if (!codigo) {
-          let vRefInterna = '';
-          if (typeof DATA !== 'undefined' && Array.isArray(DATA)) {
-            const co = $('#v-codOriginal').value.trim();
-            const nc = $('#v-nossoCodigo').value.trim();
-            const ff = (val) => val ? (DATA.find(d => (Array.isArray(d.cod) && d.cod.some(c => String(c).includes(val))) || (d.ref != null && String(d.ref) === val)) || null) : null;
-            const found = ff(co) || ff(nc);
-            if (found) vRefInterna = String(found.ref || '');
-          }
-          codigo = (vRefInterna || $('#v-nossoCodigo').value.trim() || $('#v-codOriginal').value.trim() || produto || '').toString().trim();
+        addKey($('#v-nossoCodigo') ? $('#v-nossoCodigo').value : '');
+        addKey($('#v-codOriginal') ? $('#v-codOriginal').value : '');
+        addKey(produto);
+
+        if (typeof DATA !== 'undefined' && Array.isArray(DATA)) {
+          const co = $('#v-codOriginal').value.trim();
+          const nc = $('#v-nossoCodigo').value.trim();
+          const ff = (val) => val ? (DATA.find(d => (Array.isArray(d.cod) && d.cod.some(c => String(c).includes(val))) || (d.ref != null && String(d.ref) === val)) || null) : null;
+          const found = ff(co) || ff(nc);
+          if (found) addKey(found.ref);
         }
 
-        // Bloqueia a venda se o estoque da peça estiver zerado
+        // Bloqueia a venda somente se NENHUMA chave candidata tiver estoque
+        let codigo = '';
         if (typeof window.__getEstoqueQtd === 'function') {
-          const emEstoque = window.__getEstoqueQtd(codigo);
-          if (!codigo || emEstoque <= 0) {
+          for (const k of candKeys) {
+            if (window.__getEstoqueQtd(k) > 0) { codigo = k; break; }
+          }
+          if (!codigo) {
             toast('Estoque é 0! Não é possível finalizar a venda desta peça.', 'warn');
             return;
           }
+        } else {
+          codigo = candKeys[0] || '';
         }
 
         if (ordemIdx !== -1) {
@@ -6963,7 +6970,7 @@ document.addEventListener('DOMContentLoaded', () => {
     descricao = String(descricao || '').trim();
     qtd = parseInt(qtd, 10);
     if (!codigo || !isFinite(qtd) || qtd <= 0) return false;
-    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    const idx = estoque.findIndex(r => String(r.codigo || '').trim().toLowerCase() === codigo.toLowerCase());
     let reg;
     if (idx >= 0){ estoque[idx].qtd += qtd; reg = estoque[idx]; }
     else { reg = { codigo: codigo, descricao: descricao, qtd: qtd }; estoque.push(reg); }
@@ -6977,7 +6984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     codigo = String(codigo || '').trim();
     qtd = parseInt(qtd, 10);
     if (!codigo || !isFinite(qtd) || qtd <= 0) return false;
-    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    const idx = estoque.findIndex(r => String(r.codigo || '').trim().toLowerCase() === codigo.toLowerCase());
     if (idx < 0) return false;
     estoque[idx].qtd -= qtd;
     if (estoque[idx].qtd < 0) estoque[idx].qtd = 0;
@@ -6989,7 +6996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.__getEstoqueQtd = function(codigo){
     codigo = String(codigo || '').trim();
     if (!codigo) return 0;
-    const idx = estoque.findIndex(r => String(r.codigo) === codigo);
+    const idx = estoque.findIndex(r => String(r.codigo || '').trim().toLowerCase() === codigo.toLowerCase());
     return idx >= 0 ? (parseInt(estoque[idx].qtd, 10) || 0) : 0;
   };
 })();
