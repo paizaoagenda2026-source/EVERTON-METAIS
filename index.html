@@ -66,6 +66,7 @@
       if (!key) return;
       key = String(key);
       if (key.indexOf('__fb') === 0) return;
+      if (window.__fbApplyingRemote) return;
       dirty[key] = 1;
       schedule();
     }
@@ -87,7 +88,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
 const firebaseConfig = {
@@ -111,6 +112,7 @@ try {
 window.__fb = ready ? { app: app, db: db, storage: storage } : null;
 window.__fbReady = ready;
 window.__fbSyncReady = false;
+window.__fbApplyingRemote = false;
 
 const COL = 'app_state';
 const LAST_SYNC_KEY = '__fb_lastSync';
@@ -225,8 +227,45 @@ async function restoreOnce(){
     return;
   }
 
-  syncKeys(null);
+  await syncKeys(null);
   window.__fbSyncReady = true;
+  startLiveListener();
+}
+
+function startLiveListener(){
+  if (!ready) return;
+  try {
+    onSnapshot(collection(db, COL), function(snap){
+      if (!window.__fbSyncReady) return;
+      let applied = false;
+      window.__fbApplyingRemote = true;
+      try {
+        snap.docChanges().forEach(function(change){
+          const key = change.doc.id;
+          if (String(key).indexOf('__fb') === 0) return;
+          if (change.type === 'removed'){
+            let exists = false; try { exists = localStorage.getItem(key) != null; } catch(e){}
+            if (exists){ try { localStorage.removeItem(key); } catch(e){} applied = true; }
+            return;
+          }
+          const data = change.doc.data() || {};
+          const remoteVal = (typeof data.value === 'string') ? data.value : null;
+          let curVal = null; try { curVal = localStorage.getItem(key); } catch(e){}
+          const curSanitized = (curVal == null) ? null : sanitizeForCloud(curVal);
+          if (curSanitized !== remoteVal){
+            if (remoteVal == null){ try { localStorage.removeItem(key); } catch(e){} }
+            else { try { localStorage.setItem(key, remoteVal); } catch(e){} }
+            applied = true;
+          }
+        });
+      } catch(e){}
+      window.__fbApplyingRemote = false;
+      if (applied){
+        try { localStorage.setItem(LAST_SYNC_KEY, String(Date.now())); } catch(e){}
+        window.dispatchEvent(new Event('fb:live-update'));
+      }
+    }, function(err){ console.warn('[live sync]', err && err.message); });
+  } catch(e){ console.warn('[live sync start]', e && e.message); }
 }
 
 setTimeout(restoreOnce, 1100);
@@ -6608,6 +6647,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAll();
   });
   window.addEventListener('focus', function(){ loadDB(); renderAll(); });
+  window.addEventListener('fb:live-update', function(){ loadDB(); detectChanges(); renderAll(); });
   window.__getOrders = function(){ return db.orders.map(o => Object.assign({}, o)); };
 })();
 </script>
@@ -6910,6 +6950,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expor para uso eventual
   window.__caixaRender = renderCaixa;
   window.__estoqueRender = renderEstoque;
+  window.__caixaEstoqueRefresh = function(){
+    try { const s = JSON.parse(localStorage.getItem(KEY_CAIXA) || '[]'); if (Array.isArray(s)) caixa = s; } catch(e){}
+    try { const s = JSON.parse(localStorage.getItem(KEY_ESTOQUE) || '[]'); if (Array.isArray(s)) estoque = s; } catch(e){}
+    renderCaixa();
+    renderEstoque();
+  };
+  window.addEventListener('fb:live-update', function(){ if (window.__caixaEstoqueRefresh) window.__caixaEstoqueRefresh(); });
 
   window.__addEstoque = function(codigo, descricao, qtd){
     codigo = String(codigo || '').trim();
@@ -7416,6 +7463,9 @@ document.addEventListener('DOMContentLoaded', () => {
   window.__cat_closeProduct = closeProduct;
   window.__cat_inlineEditPrice = inlineEditPrice;
   window.__cat_removePhoto = removePhoto;
+
+  window.__cat_refresh = function(){ loadState(); render(); };
+  window.addEventListener('fb:live-update', function(){ if (window.__cat_refresh) window.__cat_refresh(); });
 
   /* ------ bindings ------ (admin: sem triplo clique; ligado ao login principal) ------ */
   const searchEl = $id('catSearch');
