@@ -1047,6 +1047,16 @@ setTimeout(restoreOnce, 1100);
 </style>
 </head>
 <body>
+<script>
+window.__camCache = window.__camCache || {};
+window.__getCamStream = function(facingMode){
+  var key = facingMode || 'user';
+  var cur = window.__camCache[key];
+  if (cur && cur.getVideoTracks().length && cur.getVideoTracks()[0].readyState === 'live'){ return Promise.resolve(cur); }
+  return navigator.mediaDevices.getUserMedia({ video: { facingMode: key, width: 640, height: 480 }, audio: false })
+    .then(function(s){ window.__camCache[key] = s; return s; });
+};
+</script>
 <div class="login-overlay" id="loginOverlay">
   <img src="logo.png" alt="" class="login-bg-logo" onerror="this.style.display='none'">
   <div class="login-card">
@@ -3668,12 +3678,12 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.classList.add('open');
     status.textContent = 'Solicitando acesso à câmera...';
     try {
-      edStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 640, height: 480 }, audio: false });
+      edStream = await window.__getCamStream('environment');
       video.srcObject = edStream; try { await video.play(); } catch(_){}
       status.textContent = 'Posicione a peça e clique em Capturar.';
     } catch(err){
       try {
-        edStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+        edStream = await window.__getCamStream('user');
         video.srcObject = edStream; try { await video.play(); } catch(_){}
         status.textContent = 'Posicione a peça e clique em Capturar.';
       } catch(err2){ status.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.'; }
@@ -3681,7 +3691,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function closeEdCamera(){
     const overlay = $id('edImgOverlay'); const video = $id('edImgVideo');
-    if(edStream){ try { edStream.getTracks().forEach(t => t.stop()); } catch(_){} edStream = null; }
+    edStream = null;
     try { if(video) video.srcObject = null; } catch(_){}
     if(overlay) overlay.classList.remove('open');
   }
@@ -4104,8 +4114,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(now - lastMovementTime < 300) return;
     const target = MOVEMENT_SEQUENCE[currentIdx]; if(!target) return;
     let detected = false;
-    if(target === 'left' && yawDev < -0.09) detected = true;
-    else if(target === 'right' && yawDev > 0.09) detected = true;
+    if(target === 'left' && yawDev > 0.09) detected = true;
+    else if(target === 'right' && yawDev < -0.09) detected = true;
     else if(target === 'up' && pitchDev < -0.045) detected = true;
     else if(target === 'down' && pitchDev > 0.045) detected = true;
     if(!detected) return;
@@ -4151,7 +4161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       await ensureFaceMesh();
       faceStatus.textContent = 'Solicitando acesso à câmera...';
-      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+      stream = await window.__getCamStream('user');
       faceVideo.srcObject = stream; try { await faceVideo.play(); } catch(_){}
       camera = new Camera(faceVideo, {
         onFrame: async () => { if(!faceRunning || !faceMesh) return; try { await faceMesh.send({ image: faceVideo }); } catch(_){} },
@@ -4167,7 +4177,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function stopFaceRecognition(){
     faceRunning = false;
     if(camera){ try { await camera.stop(); } catch(_){} camera = null; }
-    if(stream){ try { stream.getTracks().forEach(t => t.stop()); } catch(_){} stream = null; }
+    stream = null;
     try { faceVideo.pause(); } catch(_){}
     try { faceVideo.srcObject = null; } catch(_){}
     faceOverlay.classList.remove('open');
@@ -4351,13 +4361,13 @@ document.addEventListener('DOMContentLoaded', () => {
   async function openSelfie(){
     selfieOverlay.classList.add('open'); selfieStatus.textContent = 'Solicitando acesso à câmera...';
     try {
-      selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+      selfieStream = await window.__getCamStream('user');
       selfieVideo.srcObject = selfieStream; try { await selfieVideo.play(); } catch(_){}
       selfieStatus.textContent = 'Posicione o rosto e clique em Capturar.';
     } catch(err){ selfieStatus.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.'; }
   }
   function closeSelfie(){
-    if(selfieStream){ try { selfieStream.getTracks().forEach(t => t.stop()); } catch(_){} selfieStream = null; }
+    selfieStream = null;
     try { selfieVideo.srcObject = null; } catch(_){}
     selfieOverlay.classList.remove('open');
   }
@@ -4521,13 +4531,13 @@ document.addEventListener('DOMContentLoaded', () => {
   async function openSelfie(){
     selfieOverlay.classList.add('open'); selfieStatus.textContent = 'Solicitando acesso à câmera...';
     try {
-      selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+      selfieStream = await window.__getCamStream('user');
       selfieVideo.srcObject = selfieStream; try { await selfieVideo.play(); } catch(_){}
       selfieStatus.textContent = 'Posicione o rosto e clique em Capturar.';
     } catch(err){ selfieStatus.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.'; }
   }
   function closeSelfie(){
-    if(selfieStream){ try { selfieStream.getTracks().forEach(t => t.stop()); } catch(_){} selfieStream = null; }
+    selfieStream = null;
     try { selfieVideo.srcObject = null; } catch(_){}
     selfieOverlay.classList.remove('open');
   }
@@ -4592,19 +4602,19 @@ document.addEventListener('DOMContentLoaded', () => {
   async function openNovoCamera(){
     novoImgOverlay.classList.add('open'); novoImgStatus.textContent = 'Solicitando acesso à câmera...';
     try {
-      novoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 640, height: 480 }, audio: false });
+      novoStream = await window.__getCamStream('environment');
       novoImgVideo.srcObject = novoStream; try { await novoImgVideo.play(); } catch(_){}
       novoImgStatus.textContent = 'Posicione a peça e clique em Capturar.';
     } catch(err){
       try {
-        novoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+        novoStream = await window.__getCamStream('user');
         novoImgVideo.srcObject = novoStream; try { await novoImgVideo.play(); } catch(_){}
         novoImgStatus.textContent = 'Posicione a peça e clique em Capturar.';
       } catch(err2){ novoImgStatus.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.'; }
     }
   }
   function closeNovoCamera(){
-    if(novoStream){ try { novoStream.getTracks().forEach(t => t.stop()); } catch(_){} novoStream = null; }
+    novoStream = null;
     try { novoImgVideo.srcObject = null; } catch(_){}
     novoImgOverlay.classList.remove('open');
   }
