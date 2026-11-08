@@ -1721,6 +1721,7 @@ setTimeout(restoreOnce, 1100);
           <label><input type="checkbox" data-perm="premium_historico"> Premium - Histórico</label>
           <label><input type="checkbox" data-perm="premium_catalogo"> Premium - Catálogo</label>
           <label><input type="checkbox" data-perm="premium_caixa"> Premium - Fluxo de Caixa</label>
+          <label><input type="checkbox" data-perm="premium_estoque"> Premium - Estoque</label>
           <label><input type="checkbox" data-perm="dados_cliente_carrinho"> Dados do Cliente (Carrinho)</label>
         </div>
       </div>
@@ -2258,7 +2259,7 @@ setTimeout(restoreOnce, 1100);
             <div style="max-height:600px;overflow:auto;">
               <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;">
                 <thead><tr style="background:#f8fafc;">
-                  <th style="text-align:left;padding:8px 10px;font-size:10.5px;text-transform:uppercase;color:#5b7189;width:35%;">Código</th>
+                  <th style="text-align:left;padding:8px 10px;font-size:10.5px;text-transform:uppercase;color:#5b7189;width:160px;">Código</th>
                   <th style="text-align:left;padding:8px 10px;font-size:10.5px;text-transform:uppercase;color:#5b7189;">Descrição</th>
                   <th style="text-align:right;padding:8px 10px;font-size:10.5px;text-transform:uppercase;color:#5b7189;white-space:nowrap;width:60px;">Qtd</th>
                   <th style="text-align:center;padding:8px 10px;font-size:10.5px;text-transform:uppercase;color:#5b7189;white-space:nowrap;width:80px;">Ações</th>
@@ -3711,7 +3712,7 @@ document.addEventListener('DOMContentLoaded', () => {
   'use strict';
   const LS_KEY_USERS = 'paizao_usuarios';
   const ALL_TABS = ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas'];
-  const EXTRA_PERMS = ['dados_cliente_carrinho', 'premium_vendas', 'premium_producao', 'premium_historico', 'premium_catalogo', 'premium_caixa'];
+  const EXTRA_PERMS = ['dados_cliente_carrinho', 'premium_vendas', 'premium_producao', 'premium_historico', 'premium_catalogo', 'premium_caixa', 'premium_estoque'];
   const DEFAULT_EVERTON = { pass: '986533990', role: 'admin', type: 'ADM', label: 'Administrador', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Everton' };
   const DEFAULT_PROG = { pass: '080888', role: 'total', type: 'ADM', label: 'Acesso Total', permissions: ALL_TABS.slice().concat(EXTRA_PERMS), selfie: '', nome: 'Programador' };
   let USERS = {};
@@ -3805,6 +3806,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       localStorage.setItem(MIGRATED_CAIXA, '1');
     }
+    const MIGRATED_ESTOQUE = 'paizao_migrated_estoque_perm_v1';
+    if (localStorage.getItem(MIGRATED_ESTOQUE) !== '1') {
+      for (const k in USERS) {
+        const u = USERS[k];
+        if (u && Array.isArray(u.permissions) && u.permissions.includes('vendas') && !u.permissions.includes('premium_estoque')) {
+          u.permissions.push('premium_estoque');
+          seededUsers = true;
+        }
+      }
+      localStorage.setItem(MIGRATED_ESTOQUE, '1');
+    }
   } catch(_){}
   for(const k in USERS){
     const u = USERS[k];
@@ -3878,9 +3890,19 @@ document.addEventListener('DOMContentLoaded', () => {
       else tab.classList.add('hidden');
     });
     updateTopButtonsVisibility(userName);
-    const target = allowed.includes('pesquisa') ? 'pesquisa' : ALL_TABS.find(t => allowed.includes(t));
-    if (target){ const btn = document.querySelector('.tab[data-tab="' + target + '"]'); if (btn) btn.click(); }
+    const isAdminUser = (u.type === 'ADM') || userName === 'PROGRAMADOR';
     if (window.updatePremiumSubTabs) { try { window.updatePremiumSubTabs(); } catch(e){} }
+    if (isAdminUser && allowed.includes('vendas')) {
+      const premiumTab = document.querySelector('.tab[data-tab="vendas"]');
+      if (premiumTab) premiumTab.click();
+      setTimeout(function(){
+        const dashTab = document.querySelector('.v-tab[data-vtab="dashboard"]');
+        if (dashTab) dashTab.click();
+      }, 80);
+    } else {
+      const target = allowed.includes('pesquisa') ? 'pesquisa' : ALL_TABS.find(t => allowed.includes(t));
+      if (target){ const btn = document.querySelector('.tab[data-tab="' + target + '"]'); if (btn) btn.click(); }
+    }
   }
   function grantAccess(user, acc){
     window.currentUser = user;
@@ -4424,19 +4446,19 @@ document.addEventListener('DOMContentLoaded', () => {
   usrTipo.addEventListener('change', () => {
     const t = usrTipo.value;
     const defaults = {
-      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas','dados_cliente_carrinho','premium_vendas','premium_producao','premium_historico','premium_catalogo','premium_caixa'],
-      COMPRADOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      AGREGADO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      AGREGADO2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      CLIENTE: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      TRIAGEM: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao', 'premium_catalogo'],
-      FINANCEIRO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_historico', 'premium_catalogo'],
-      VENDEDOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      VENDEDOR_EXTERNO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      VENDEDOR_EXTERNO_1: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      VENDEDOR_EXTERNO_2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      VENDEDOR_EXTERNO_3: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo'],
-      PRODUCAO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao', 'premium_catalogo']
+      ADM: ['catalisador','novo','po','compravendapo','pesquisa','cadastro','cotacoes','usuarios','auditoria','carrinho','historicocompras','vendas','dados_cliente_carrinho','premium_vendas','premium_producao','premium_historico','premium_catalogo','premium_caixa','premium_estoque'],
+      COMPRADOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      AGREGADO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      AGREGADO2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      CLIENTE: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      TRIAGEM: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao', 'premium_catalogo', 'premium_estoque'],
+      FINANCEIRO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_historico', 'premium_catalogo', 'premium_estoque'],
+      VENDEDOR: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      VENDEDOR_EXTERNO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      VENDEDOR_EXTERNO_1: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      VENDEDOR_EXTERNO_2: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      VENDEDOR_EXTERNO_3: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_catalogo', 'premium_estoque'],
+      PRODUCAO: ['pesquisa', 'po', 'carrinho', 'vendas', 'premium_vendas', 'premium_producao', 'premium_catalogo', 'premium_estoque']
     };
     setAllowedToUI(defaults[t] || []);
   });
@@ -6920,24 +6942,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let showHistorico = perms.includes('premium_historico');
     let showCatalogo = perms.includes('premium_catalogo');
     let showCaixa = perms.includes('premium_caixa');
+    let showEstoque = perms.includes('premium_estoque');
 
     if (isAdm && !showVendas && !showProducao && !showHistorico) {
       showVendas = showProducao = showHistorico = true;
     }
     if (isAdm) showCatalogo = true;
     if (isAdm) showCaixa = true;
+    if (isAdm) showEstoque = true;
+    const showDashboard = isAdm;
 
     const tabVendas = document.querySelector('.v-tab[data-vtab="vendas"]');
     const tabProducao = document.querySelector('.v-tab[data-vtab="producao"]');
     const tabHistorico = document.querySelector('.v-tab[data-vtab="historico"]');
     const tabCatalogo = document.querySelector('.v-tab[data-vtab="catalogo"]');
     const tabCaixa = document.querySelector('.v-tab[data-vtab="caixa"]');
+    const tabEstoque = document.querySelector('.v-tab[data-vtab="estoque"]');
+    const tabDashboard = document.querySelector('.v-tab[data-vtab="dashboard"]');
 
     if (tabVendas) tabVendas.style.display = showVendas ? 'flex' : 'none';
     if (tabProducao) tabProducao.style.display = showProducao ? 'flex' : 'none';
     if (tabHistorico) tabHistorico.style.display = showHistorico ? 'flex' : 'none';
     if (tabCatalogo) tabCatalogo.style.display = showCatalogo ? 'flex' : 'none';
     if (tabCaixa) tabCaixa.style.display = showCaixa ? 'flex' : 'none';
+    if (tabEstoque) tabEstoque.style.display = showEstoque ? 'flex' : 'none';
+    if (tabDashboard) tabDashboard.style.display = showDashboard ? 'flex' : 'none';
 
     const activeTab = document.querySelector('.v-tab.active');
     if (activeTab && activeTab.style.display === 'none') {
