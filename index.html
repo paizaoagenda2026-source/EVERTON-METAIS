@@ -3923,6 +3923,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.__cat_syncAdmin === 'function') { try { window.__cat_syncAdmin(); } catch(_){} }
     const vav = document.getElementById('v-avatar');
     if (vav) vav.textContent = String(window.currentUserNome).substring(0,2).toUpperCase();
+    const vv = document.getElementById('v-vendedor');
+    if (vv) vv.value = window.currentUserNome || window.currentUser || '';
   }
   function addLogoutButton(user, acc){
     const existing = document.getElementById('btnLogout'); if(existing) existing.remove();
@@ -6193,6 +6195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       $('#v-qtd').value = '1'; 
       $('#v-valorUnit').value = 'R$ 0,00'; 
       $('#v-desconto').value = 'R$ 0,00';
+      if ($('#v-vendedor')) $('#v-vendedor').value = window.currentUserNome || window.currentUser || '';
       trocaDiscountApplied = 0;
       updateTotal();
     });
