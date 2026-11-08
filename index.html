@@ -2159,7 +2159,7 @@ setTimeout(restoreOnce, 1100);
           #vendas-system .v-hist-table .hist-del{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;cursor:pointer;font-size:13px;padding:3px 7px;line-height:1}
         </style>
         <section class="v-card">
-          <div class="v-card-head"><h2>Histórico de Vendas</h2><span class="vsub" id="v-hist-count">0 vendas</span></div>
+          <div class="v-card-head"><h2>Histórico de Vendas</h2><span class="vsub" id="v-hist-count">0 vendas</span><button type="button" id="v-hist-pdf-btn" class="v-btn sm arch" style="margin-left:auto">📄 Gerar PDF</button></div>
           <div class="v-hist-search"><input type="text" id="v-hist-search" placeholder="Buscar por cliente, telefone, vendedor, produto, código…" autocomplete="off"></div>
           <div id="v-hist-list"></div>
         </section>
@@ -6122,9 +6122,27 @@ document.addEventListener('DOMContentLoaded', () => {
           try { window.__removeEstoque(codigo, qtd); } catch(e){}
         }
 
+        const finalizadoEm = Date.now();
+        let produtorVenda = '';
+        if (ordemIdx !== -1){ produtorVenda = db.orders[ordemIdx].produtor || ''; }
+
         saveDB();
         playChime(880);
         toast('Venda finalizada e lançada no fluxo de caixa!', 'success');
+
+        try {
+          gerarVendaPDF({
+            id: id, cliente: cliente, telefone: $('#v-telefone').value.trim(),
+            endereco: $('#v-endereco').value.trim(), cidade: $('#v-cidade').value.trim(),
+            estado: $('#v-estado').value.trim().toUpperCase(),
+            produto: produto, vendedor: vendedor, produtor: produtorVenda,
+            pagamento: $('#v-pagamento').value.trim(),
+            codOriginal: $('#v-codOriginal').value.trim(), nossoCodigo: $('#v-nossoCodigo').value.trim(),
+            valorUnitario: v, desconto: d, total: total, qtd: qtd,
+            isTroca: $('#v-troca').checked, obs: $('#v-obs').value.trim(),
+            finalizadoEm: finalizadoEm
+          });
+        } catch(e){ console.warn('[vendaPDF]', e); }
 
         const descricao = 'Venda: ' + produto + ' - ' + cliente + ' (Pedido ' + id + ')';
         const entry = {
@@ -6401,6 +6419,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const histSearchEl = $('#v-hist-search');
   if (histSearchEl) histSearchEl.addEventListener('input', function(){ histSearch = this.value; renderHistorico(); });
 
+  const histPdfBtn = $('#v-hist-pdf-btn');
+  if (histPdfBtn) histPdfBtn.addEventListener('click', function(){ gerarHistoricoPDF(); });
+
   function renderVendasStats(){
     const active = getActiveOrders();
     const a = $('#v-stat-total'); if (a) a.textContent = active.length;
@@ -6532,6 +6553,276 @@ document.addEventListener('DOMContentLoaded', () => {
         '</tr>';
       }).join('') + '</tbody></table></div>';
   }
+  /* ==================== GERAÇÃO DE PDF (Histórico + Venda) ==================== */
+  let _logoPdfImg = null;
+  function loadLogoPdfImg(){
+    return new Promise(function(resolve){
+      try {
+        const img = new Image();
+        let settled = false;
+        img.onload = function(){ settled = true; _logoPdfImg = img; resolve(img); };
+        img.onerror = function(){ settled = true; resolve(null); };
+        img.src = 'logo.png';
+        setTimeout(function(){ if (!settled) resolve(null); }, 3500);
+      } catch(e){ resolve(null); }
+    });
+  }
+  function pdfMoney(n){ return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function pdfDate(ts){ if(!ts) return '—'; const d = new Date(ts); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+  function drawPdfHeader(doc, logo, docTitle, docSub, rightTag){
+    const pageW = doc.internal.pageSize.getWidth();
+    const m = 15;
+    doc.setFillColor(15,35,56); doc.rect(0,0,pageW,30,'F');
+    doc.setFillColor(245,158,11); doc.rect(0,30,pageW,2,'F');
+    let tx = m, hasLogo = !!(logo && logo.naturalWidth);
+    if (hasLogo){ try { doc.addImage(logo, 'PNG', m, 5, 20, 20); tx = m + 26; } catch(e){ hasLogo = false; tx = m + 26; } }
+    if (!hasLogo){
+      doc.setFillColor(245,158,11); doc.roundedRect(m,5,20,20,3,3,'F');
+      doc.setTextColor(59,36,0); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text('EM', m+10, 17.5, { align:'center' });
+      tx = m + 26;
+    }
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('EVERTON METAIS', tx, 15);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(203,214,226);
+    doc.text('Vendas & Produção de Catalisadores', tx, 21);
+    let y = 42;
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(15,35,56);
+    doc.text(docTitle, m, y);
+    if (rightTag){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(180,83,9);
+      doc.text(rightTag, pageW - m, y, { align:'right' });
+    }
+    y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90,106,125);
+    doc.text(docSub || '', m, y);
+    y += 2;
+    doc.setDrawColor(226,231,238); doc.line(m, y, pageW - m, y);
+    return y + 9;
+  }
+
+  function drawPdfFooter(doc){
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(226,231,238); doc.line(15, pageH - 16, pageW - 15, pageH - 16);
+    doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(147,162,179);
+    doc.text('Everton Metais · Documento gerado em ' + new Date().toLocaleString('pt-BR'), pageW/2, pageH - 9, { align:'center' });
+  }
+
+  function pdfSection(doc, y, title, pageW, m){
+    doc.setFillColor(241,245,249); doc.rect(m, y, pageW - m*2, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(15,35,56);
+    doc.text(title, m + 3, y + 4.8);
+    return y + 11;
+  }
+
+  function pdfLabelLine(doc, x, y, label, value, labelW){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(90,106,125);
+    doc.text(label, x, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(22,32,44);
+    doc.text(String(value==null||value===''?'—':value), x + labelW, y);
+    return y + 6;
+  }
+
+  function pdfValueTable(doc, m, y, pageW, rec){
+    const colW = (pageW - m*2) / 3;
+    const heads = ['Quantidade', 'Valor Unitário', 'Desconto'];
+    const vals = [
+      String(rec.qtd != null ? rec.qtd : 1),
+      rec.valorUnitario != null ? pdfMoney(rec.valorUnitario) : '0,00',
+      rec.desconto != null ? pdfMoney(rec.desconto) : '0,00'
+    ];
+    doc.setFillColor(15,35,56); doc.rect(m, y, pageW - m*2, 9, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+    let bx = m;
+    heads.forEach(function(h){ doc.text(h, bx + 4, y + 6); bx += colW; });
+    y += 9;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(22,32,44);
+    doc.setDrawColor(226,231,238); doc.rect(m, y, pageW - m*2, 11);
+    bx = m;
+    vals.forEach(function(v){ doc.text(v, bx + 4, y + 7.5); bx += colW; });
+    y += 11;
+    y += 5;
+    doc.setFillColor(240,253,244); doc.setDrawColor(187,247,208);
+    doc.roundedRect(m, y, pageW - m*2, 15, 2, 2, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(21,128,61);
+    doc.text('VALOR TOTAL (R$)', m + 4, y + 9.5);
+    doc.setFont('helvetica','bold'); doc.setFontSize(17);
+    doc.text(pdfMoney(rec.total || 0), pageW - m - 4, y + 10, { align:'right' });
+    return y + 15;
+  }
+
+  async function gerarHistoricoPDF(){
+    if (!window.jspdf || !window.jspdf.jsPDF){ toast('Biblioteca de PDF não carregada. Verifique a internet.', 'warn'); return; }
+    let items = db.orders.filter(o => o.isHistorico || o.status === 'pronto');
+    if (histSearch){
+      const q = histSearch.toLowerCase();
+      items = items.filter(o =>
+        (o.id||'').toString().toLowerCase().includes(q) ||
+        (o.codOriginal||'').toString().toLowerCase().includes(q) ||
+        (o.nossoCodigo||'').toString().toLowerCase().includes(q) ||
+        (o.produtor||'').toString().toLowerCase().includes(q) ||
+        (o.cliente||'').toString().toLowerCase().includes(q) ||
+        (o.produto||'').toString().toLowerCase().includes(q) ||
+        (o.vendedor||'').toString().toLowerCase().includes(q) ||
+        (o.telefone||'').toString().toLowerCase().includes(q)
+      );
+    }
+    if (!items.length){ toast('Nenhuma venda no histórico para gerar o PDF.', 'warn'); return; }
+    const logo = await loadLogoPdfImg();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const m = 15;
+    const docTitle = 'Relatório de Histórico de Vendas';
+    const docSub = items.length + ' venda(s)' + (histSearch ? (' · Filtro: "' + histSearch + '"') : ' · Todos os registros');
+    const rightTag = new Date().toLocaleDateString('pt-BR');
+    let y = drawPdfHeader(doc, logo, docTitle, docSub, rightTag);
+
+    const cols = [
+      { label:'Data da Venda', w:28, align:'left' },
+      { label:'Cliente', w:34, align:'left' },
+      { label:'Telefone', w:22, align:'left' },
+      { label:'Descrição da Peça', w:62, align:'left' },
+      { label:'Vendedor', w:24, align:'left' },
+      { label:'Produtor', w:22, align:'left' },
+      { label:'Troca', w:13, align:'center' },
+      { label:'R$ Unit', w:20, align:'right' },
+      { label:'Desconto', w:20, align:'right' },
+      { label:'Total', w:22, align:'right' }
+    ];
+
+    doc.setFillColor(15,35,56); doc.rect(m, y, pageW - m*2, 10, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+    let hx = m;
+    cols.forEach(function(c){
+      const align = c.align === 'right' ? 'right' : (c.align === 'center' ? 'center' : 'left');
+      const x = align === 'right' ? hx + c.w - 2 : (align === 'center' ? hx + c.w/2 : hx + 2);
+      doc.text(c.label, x, y + 6.6, { align: align });
+      hx += c.w;
+    });
+    y += 10;
+
+    items.forEach(function(o, oi){
+      const dataVenda = o.finalizadoEm ? pdfDate(o.finalizadoEm) : (o.prontoEm ? pdfDate(o.prontoEm) : (o.criadoEm ? pdfDate(o.criadoEm) : '—'));
+      const colVals = [
+        dataVenda, o.cliente || '—', o.telefone || '—', o.produto || '—',
+        o.vendedor || '—', o.produtor || '—', o.isTroca ? 'Sim' : 'Não',
+        o.valorUnitario != null ? pdfMoney(o.valorUnitario) : '0,00',
+        o.desconto != null ? pdfMoney(o.desconto) : '0,00',
+        o.total != null ? pdfMoney(o.total) : '0,00'
+      ];
+      let maxLines = 1;
+      const wrapped = cols.map(function(c, i){
+        const size = c.align === 'right' ? 8 : 7.5;
+        doc.setFont('helvetica','normal'); doc.setFontSize(size);
+        const lines = doc.splitTextToSize(String(colVals[i] == null ? '' : colVals[i]), c.w - 4);
+        if (lines.length > maxLines) maxLines = lines.length;
+        return lines;
+      });
+      const rowH = maxLines * 3.4 + 2.4;
+      if (y + rowH > doc.internal.pageSize.getHeight() - 34){ doc.addPage(); y = drawPdfHeader(doc, logo, docTitle, docSub, rightTag); }
+      if (oi % 2 === 0){ doc.setFillColor(248,250,252); doc.rect(m, y, pageW - m*2, rowH, 'F'); }
+      let rcx = m;
+      cols.forEach(function(c, i){
+        const align = c.align === 'right' ? 'right' : (c.align === 'center' ? 'center' : 'left');
+        const size = c.align === 'right' ? 8 : 7.5;
+        doc.setFont('helvetica','normal'); doc.setFontSize(size);
+        doc.setTextColor(22,32,44);
+        wrapped[i].forEach(function(ln, li){
+          const x = align === 'right' ? rcx + c.w - 2 : (align === 'center' ? rcx + c.w/2 : rcx + 2);
+          doc.text(ln, x, y + 3 + li*3.4, { align: align });
+        });
+        rcx += c.w;
+      });
+      doc.setDrawColor(226,231,238); doc.setLineWidth(0.2); doc.line(m, y + rowH, pageW - m, y + rowH);
+      y += rowH;
+    });
+
+    y += 4;
+    if (y > doc.internal.pageSize.getHeight() - 34){ doc.addPage(); y = drawPdfHeader(doc, logo, docTitle, docSub, rightTag); }
+    let totUnit = 0, totDesc = 0, totGeral = 0;
+    items.forEach(function(o){ totUnit += Number(o.valorUnitario||0); totDesc += Number(o.desconto||0); totGeral += Number(o.total||0); });
+    doc.setFillColor(240,253,244); doc.setDrawColor(187,247,208);
+    doc.roundedRect(m, y, pageW - m*2, 14, 2, 2, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(21,128,61);
+    doc.text(items.length + ' venda(s)', m+4, y+8.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(22,32,44);
+    doc.text('Unit: R$ ' + pdfMoney(totUnit), m+4, y+12);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Desconto: R$ ' + pdfMoney(totDesc), pageW - m - 4, y+8.5, { align:'right' });
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(21,128,61);
+    doc.text('TOTAL: R$ ' + pdfMoney(totGeral), pageW - m - 4, y+12.5, { align:'right' });
+
+    drawPdfFooter(doc);
+    doc.save('historico_vendas_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.pdf');
+  }
+
+  async function gerarVendaPDF(rec){
+    if (!window.jspdf || !window.jspdf.jsPDF){ toast('Biblioteca de PDF não carregada. Verifique a internet.', 'warn'); return; }
+    rec = rec || {};
+    const logo = await loadLogoPdfImg();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const m = 15;
+    const dataEmissao = rec.finalizadoEm ? pdfDate(rec.finalizadoEm) : pdfDate(Date.now());
+    let y = drawPdfHeader(doc, logo, 'Comprovante de Venda', 'Pedido ' + (rec.id || '—') + ' · Emitido em ' + dataEmissao, (rec.id || ''));
+
+    y = pdfSection(doc, y + 2, 'DADOS DO CLIENTE', pageW, m);
+    y = pdfLabelLine(doc, m, y, 'Cliente', rec.cliente, 32);
+    y = pdfLabelLine(doc, m, y, 'Telefone', rec.telefone, 32);
+    if (rec.endereco){ y = pdfLabelLine(doc, m, y, 'Endereço', rec.endereco, 32); }
+    const cidade = [rec.cidade, rec.estado].filter(Boolean).join(' / ');
+    if (cidade){ y = pdfLabelLine(doc, m, y, 'Cidade/UF', cidade, 32); }
+
+    y = pdfSection(doc, y + 4, 'DADOS DA VENDA', pageW, m);
+    y = pdfLabelLine(doc, m, y, 'Vendedor', rec.vendedor, 32);
+    if (rec.produtor){ y = pdfLabelLine(doc, m, y, 'Produtor', rec.produtor, 32); }
+    if (rec.pagamento){ y = pdfLabelLine(doc, m, y, 'Pagamento', rec.pagamento, 32); }
+    y = pdfLabelLine(doc, m, y, 'Troca (20%)', rec.isTroca ? 'Sim' : 'Não', 32);
+
+    y = pdfSection(doc, y + 4, 'PEÇA / PRODUTO', pageW, m);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(90,106,125);
+    doc.text('Descrição', m + 3, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(22,32,44);
+    const descLines = doc.splitTextToSize(String(rec.produto || '—'), pageW - m*2 - 6);
+    descLines.forEach(function(ln, li){ doc.text(ln, m + 3, y + 4.5 + li*4.2); });
+    y += 4.5 + descLines.length * 4.2 + 1;
+    if (rec.nossoCodigo || rec.codOriginal){
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(90,106,125);
+      doc.text('Códigos', m + 3, y + 4);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(22,32,44);
+      const cods = [rec.nossoCodigo ? 'Nosso: ' + rec.nossoCodigo : '', rec.codOriginal ? 'Original: ' + rec.codOriginal : ''].filter(Boolean).join('   |   ');
+      doc.text(cods || '—', m + 3, y + 8);
+      y += 12;
+    }
+
+    y += 4;
+    y = pdfValueTable(doc, m, y, pageW, rec);
+
+    if (rec.obs){
+      y += 6;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(90,106,125);
+      doc.text('Observações', m, y);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(22,32,44);
+      const ol = doc.splitTextToSize(String(rec.obs), pageW - m*2);
+      ol.forEach(function(ln, li){ doc.text(ln, m, y + 4.5 + li*4); });
+      y += 4.5 + ol.length*4;
+    }
+
+    y += 14;
+    doc.setDrawColor(180,190,200); doc.line(m, y, m + 70, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(90,106,125);
+    doc.text('Assinatura do cliente', m, y + 4);
+    drawPdfFooter(doc);
+    doc.save('comprovante_venda_' + String(rec.id || Date.now()).replace(/[^A-Za-z0-9_-]/g, '') + '.pdf');
+  }
+
+  window.__vendas_gerarHistoricoPDF = gerarHistoricoPDF;
+  window.__vendas_gerarVendaPDF = gerarVendaPDF;
+
   function updateTabBadges(){
     const unread = getReadyUnread().length;
     const inProd = getActiveOrders().filter(o => o.status === 'producao').length;
