@@ -3962,33 +3962,76 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d'); ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(v, 0, 0, w, h);
     try { return canvas.toDataURL('image/jpeg', 0.7); } catch(e){ return null; }
   }
-  function toNormalizedGray(dataUrl){
-    return new Promise(resolve => {
-      const img = new Image(); img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const S = 48; const c = document.createElement('canvas'); c.width = S; c.height = S;
-        const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, S, S);
-        let data; try { data = cx.getImageData(0, 0, S, S).data; } catch(e){ resolve(null); return; }
-        const gray = new Float32Array(S*S);
-        for (let i = 0; i < S*S; i++){ gray[i] = data[i*4]*0.299 + data[i*4+1]*0.587 + data[i*4+2]*0.114; }
-        let mean = 0; for (let i = 0; i < gray.length; i++) mean += gray[i]; mean /= gray.length;
-        let varr = 0; for (let i = 0; i < gray.length; i++) varr += (gray[i] - mean) ** 2; varr /= gray.length;
-        const std = Math.sqrt(varr) || 1;
-        const out = new Float32Array(gray.length);
-        for (let i = 0; i < gray.length; i++) out[i] = (gray[i] - mean) / std;
-        resolve(out);
-      };
-      img.onerror = () => resolve(null); img.src = dataUrl;
+  // ===== Reconhecimento facial por descritores (face-api.js) =====
+  let faceApiPromise = null;
+  function loadFaceApi(){
+    if (faceApiPromise) return faceApiPromise;
+    faceApiPromise = new Promise(function(resolve, reject){
+      let pending = 2;
+      function step(){ pending--; if (pending === 0){ resolve(); } }
+      function fail(e){ reject(e); }
+      const sTf = document.createElement('script');
+      sTf.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@1.7.0/dist/tf-core.min.js';
+      sTf.crossOrigin = 'anonymous';
+      sTf.onload = step; sTf.onerror = fail;
+      document.head.appendChild(sTf);
+      const sFace = document.createElement('script');
+      sFace.src = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+      sFace.crossOrigin = 'anonymous';
+      sFace.onload = step; sFace.onerror = fail;
+      document.head.appendChild(sFace);
+    });
+    return faceApiPromise;
+  }
+  const FACES_MODELS_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+  let faceModelsPromise = null;
+  function ensureFaceModels(){
+    if (faceModelsPromise) return faceModelsPromise;
+    faceModelsPromise = (async function(){
+      await loadFaceApi();
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(FACES_MODELS_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(FACES_MODELS_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(FACES_MODELS_URL)
+      ]);
+    })();
+    return faceModelsPromise;
+  }
+  function faceEuclidean(a, b){
+    let s = 0; for (let i = 0; i < a.length; i++){ const d = a[i] - b[i]; s += d * d; }
+    return Math.sqrt(s || 0);
+  }
+  function faceLoadImage(src){
+    return new Promise(function(resolve, reject){
+      const img = new Image();
+      if (String(src).indexOf('data:') !== 0) img.crossOrigin = 'anonymous';
+      img.onload = function(){ resolve(img); };
+      img.onerror = function(){ reject(new Error('falha ao carregar imagem')); };
+      img.src = src;
     });
   }
+  function detectDescriptor(input){
+    return faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+      .withFaceLandmarks().withFaceDescriptor()
+      .then(function(det){ return det ? det.descriptor : null; })
+      .catch(function(){ return null; });
+  }
+  async function descriptorFromImage(src){
+    const img = await faceLoadImage(src);
+    return await detectDescriptor(img);
+  }
   async function findBestFaceMatch(capturedDataUrl, usersWithSelfie){
-    const captured = await toNormalizedGray(capturedDataUrl); if (!captured) return null;
+    try { await ensureFaceModels(); } catch(e){ return null; }
+    let captured = null;
+    try { captured = await descriptorFromImage(capturedDataUrl); } catch(e){ captured = null; }
+    if (!captured) return null;
     let bestUser = null, bestScore = Infinity;
     for (const [un, u] of Object.entries(usersWithSelfie)){
-      const stored = await toNormalizedGray(u.selfie); if (!stored) continue;
-      let sum = 0; for (let i = 0; i < captured.length; i++){ const d = captured[i] - stored[i]; sum += d * d; }
-      const mse = sum / captured.length;
-      if (mse < bestScore){ bestScore = mse; bestUser = un; }
+      let stored = null;
+      try { stored = await descriptorFromImage(u.selfie); } catch(e){ stored = null; }
+      if (!stored) continue;
+      const dist = faceEuclidean(captured, stored);
+      if (dist < bestScore){ bestScore = dist; bestUser = un; }
     }
     return bestUser ? { user: bestUser, score: bestScore } : null;
   }
@@ -4087,8 +4130,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let captured = null; try { captured = captureFaceFrame(); } catch(e){ captured = null; }
     if (!captured){ faceStatus.textContent = 'Não foi possível capturar a imagem. Tente novamente.'; setTimeout(stopFaceRecognition, 2500); return; }
     let match = null; try { match = await findBestFaceMatch(captured, usersWithSelfie); } catch(e){ match = null; }
-    const THRESHOLD = 1.5;
-    if (match && match.score < THRESHOLD){
+    const THRESHOLD = 0.55;
+    if (match && match.score <= THRESHOLD){
       faceStatus.textContent = '✅ Rosto reconhecido: ' + match.user;
       setTimeout(() => { stopFaceRecognition(); grantAccess(match.user, USERS[match.user]); }, 900);
     } else {
