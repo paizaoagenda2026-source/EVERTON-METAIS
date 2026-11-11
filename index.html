@@ -1262,13 +1262,13 @@ window.__getCamStream = function(facingMode){
             <th class="sortable" data-sort="cod">Código <span class="arrow">▼</span></th>
             <th class="sortable" data-sort="marca">Marca / Modelo <span class="arrow">▼</span></th>
             <th style="width:70px;text-align:center">País</th>
+            <th style="width:96px;text-align:center">Editar / Excluir</th>
             <th class="sortable num" data-sort="peso">Peso (kg) <span class="arrow">▼</span></th>
             <th class="sortable num" data-sort="pd">Teor Pd <span class="arrow">▼</span></th>
             <th class="sortable num" data-sort="pt">Teor Pt <span class="arrow">▼</span></th>
             <th class="sortable num" data-sort="rh">Teor Rh <span class="arrow">▼</span></th>
             <th class="sortable num" data-sort="rskg">R$ / KG <span class="arrow">▼</span></th>
             <th class="sortable num" data-sort="rspeca">R$ / Peça <span class="arrow">▼</span></th>
-            <th style="width:96px;text-align:center">Editar / Excluir</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -2826,16 +2826,16 @@ function render(){
       <td>${cods}</td>
       <td><div class="veh">${esc(it.marca)}<small>${it.modelo && it.modelo!=='—' ? esc(it.modelo) : 'Modelo não informado'}</small></div></td>
       <td style="text-align:center"><span class="tbl-flag" title="${esc(paisTxt)}"><img src="${flagUrl(paisCod, 40)}" alt="${esc(paisTxt)}" onerror="this.style.display='none'"> ${esc(paisCod)}</span></td>
+      <td style="text-align:center;white-space:nowrap">
+        <button class="row-edit" data-edit-row="${esc(it.ref)}" title="Editar este lançamento" aria-label="Editar">✎</button>
+        <button class="row-edit del" data-del-row="${esc(it.ref)}" title="Excluir este lançamento" aria-label="Excluir">🗑</button>
+      </td>
       <td class="num peso">${fmtNum(it.peso,3)}${marker}</td>
       <td class="num metal ${it.pd? '':'zero'}">${fmtTeor(it.pd)}</td>
       <td class="num metal ${it.pt? '':'zero'}">${fmtTeor(it.pt)}</td>
       <td class="num metal ${it.rh? '':'zero'}">${fmtTeor(it.rh)}</td>
       <td class="num money ${c.rskg? '':'muted'}">${fmtMoney(c.rskg)}</td>
       <td class="num money ${c.rspeca? '':'muted'}">${fmtMoney(c.rspeca)}</td>
-      <td style="text-align:center;white-space:nowrap">
-        <button class="row-edit" data-edit-row="${esc(it.ref)}" title="Editar este lançamento" aria-label="Editar">✎</button>
-        <button class="row-edit del" data-del-row="${esc(it.ref)}" title="Excluir este lançamento" aria-label="Excluir">🗑</button>
-      </td>
     </tr>`;
   }
   tbody.innerHTML = html;
